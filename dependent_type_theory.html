@@ -59,11 +59,11 @@
                 var theme = localStorage.getItem('mdbook-theme');
                 var sidebar = localStorage.getItem('mdbook-sidebar');
 
-                if (theme.startsWith('"') && theme.endsWith('"')) {
+                if (theme && theme.startsWith('"') && theme.endsWith('"')) {
                     localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
                 }
 
-                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                if (sidebar && sidebar.startsWith('"') && sidebar.endsWith('"')) {
                     localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
                 }
             } catch (e) { }
@@ -361,6 +361,15 @@ an abbreviation for <code>Type 0</code>:</p>
 <pre><code class="language-lean">#check Type
 #check Type 0
 </code></pre>
+<p>The following table may help concretize the relationships being discussed.
+Movement along the x-axis represents a change in the universe, while movement
+along the y-axis represents a change in what is sometimes referred to as
+&quot;degree&quot;.</p>
+<table><thead><tr><th align="center"></th><th align="center"></th><th align="center"></th><th align="center"></th><th align="center"></th><th align="center"></th></tr></thead><tbody>
+<tr><td align="center">sort</td><td align="center">Prop (Sort 0)</td><td align="center">Type (Sort 1)</td><td align="center">Type 1 (Sort 2)</td><td align="center">Type 2 (Sort 3)</td><td align="center">...</td></tr>
+<tr><td align="center">type</td><td align="center">True</td><td align="center">Bool</td><td align="center">Nat -&gt; Type</td><td align="center">Type -&gt; Type 1</td><td align="center">...</td></tr>
+<tr><td align="center">term</td><td align="center">trivial</td><td align="center">true</td><td align="center">fun n =&gt; Fin n</td><td align="center">fun (_ : Type) =&gt; Type</td><td align="center">...</td></tr>
+</tbody></table>
 <p>Some operations, however, need to be <em>polymorphic</em> over type
 universes. For example, <code>List α</code> should make sense for any type
 <code>α</code>, no matter which type universe <code>α</code> lives in. This explains the
@@ -632,7 +641,7 @@ why the definition of <code>foo</code> below type checks, but the definition of
   def bar := (fun a =&gt; fun x : a =&gt; x + 2) Nat
 -/
 </code></pre>
-<h1><a class="header" href="#a-name_variables_and_sectionsavariables-and-sections" id="a-name_variables_and_sectionsavariables-and-sections"><a name="_variables_and_sections"></a>Variables and Sections</a></h1>
+<h1><a class="header" href="#variables-and-sections" id="variables-and-sections">Variables and Sections</a></h1>
 <p>Consider the following three function definitions:</p>
 <pre><code class="language-lean">def compose (α β γ : Type) (g : β → γ) (f : α → β) (x : α) : γ :=
   g (f x)
@@ -692,14 +701,14 @@ a <code>section</code>:</p>
   def doThrice := h (h (h x))
 end useful
 </code></pre>
-<p>When the section is closed, the variables go out of scope, and become
-nothing more than a distant memory.</p>
+<p>When the section is closed, the variables go out of scope, and cannot
+be referenced any more.</p>
 <p>You do not have to indent the lines within a section. Nor do you have
 to name a section, which is to say, you can use an anonymous
 <code>section</code> / <code>end</code> pair. If you do name a section, however, you
 have to close it using the same name. Sections can also be nested,
 which allows you to declare new variables incrementally.</p>
-<h1><a class="header" href="#a-name_namespacesanamespaces" id="a-name_namespacesanamespaces"><a name="_namespaces"></a>Namespaces</a></h1>
+<h1><a class="header" href="#namespaces" id="namespaces">Namespaces</a></h1>
 <p>Lean provides you with the ability to group definitions into nested,
 hierarchical <em>namespaces</em>:</p>
 <pre><code class="language-lean">namespace Foo
@@ -888,7 +897,7 @@ def h2 (x : Nat) : Nat :=
 #eval h2 5 -- 5
 </code></pre>
 <p>The functions <code>f</code> and <code>g</code> above denote the same function.</p>
-<h2><a class="header" href="#a-name_implicit_argsaimplicit-arguments" id="a-name_implicit_argsaimplicit-arguments"><a name="_implicit_args"></a>Implicit Arguments</a></h2>
+<h2><a class="header" href="#implicit-arguments" id="implicit-arguments">Implicit Arguments</a></h2>
 <p>Suppose we have an implementation of lists as:</p>
 <pre><code class="language-lean"><span class="boring">universe u
 </span><span class="boring">def Lst (α : Type u) : Type u := List α
@@ -1089,6 +1098,9 @@ output indicates that the first argument is implicit.</p>
         
         <script type="text/javascript">
             window.playground_copyable = true;
+            window.clip_buttons = true;
+            window.tryit_buttons = false;
+            window.side_bar = true;
         </script>
         
 

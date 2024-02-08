@@ -59,11 +59,11 @@
                 var theme = localStorage.getItem('mdbook-theme');
                 var sidebar = localStorage.getItem('mdbook-sidebar');
 
-                if (theme.startsWith('"') && theme.endsWith('"')) {
+                if (theme && theme.startsWith('"') && theme.endsWith('"')) {
                     localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
                 }
 
-                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                if (sidebar && sidebar.startsWith('"') && sidebar.endsWith('"')) {
                     localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
                 }
             } catch (e) { }
@@ -181,7 +181,7 @@ structure, as is the dependent product (Sigma) type.
 In general, whenever we define a structure <code>S</code>, we usually
 define <em>projection</em> functions that allow us to &quot;destruct&quot; each
 instance of <code>S</code> and retrieve the values that are stored in its
-fields. The functions <code>prod.pr1</code> and <code>prod.pr2</code>, which return the
+fields. The functions <code>prod.fst</code> and <code>prod.snd</code>, which return the
 first and second elements of a pair, are examples of such projections.</p>
 <p>When writing programs or formalizing mathematics, it is not uncommon
 to define structures containing many fields. The <code>structure</code>
@@ -204,7 +204,8 @@ namespace with the same name. The general form is as follows:</p>
 </code></pre>
 <p>Values of type <code>Point</code> are created using <code>Point.mk a b</code>, and the
 fields of a point <code>p</code> are accessed using <code>Point.x p</code> and
-<code>Point.y p</code>. The structure command also generates useful recursors and
+<code>Point.y p</code> (but <code>p.x</code> and <code>p.y</code> also work, see below).
+The structure command also generates useful recursors and
 theorems. Here are some of the constructions generated for the
 declaration above.</p>
 <pre><code class="language-lean"><span class="boring">structure Point (α : Type u) where
@@ -239,7 +240,7 @@ example (a b : α) : x (mk a b) = a :=
 example (a b : α) : y (mk a b) = b :=
   rfl
 </code></pre>
-<p>Given <code>p : Point Nat</code>, the notation <code>p.x</code> is shorthand for
+<p>Given <code>p : Point Nat</code>, the dot notation <code>p.x</code> is shorthand for
 <code>Point.x p</code>. This provides a convenient way of accessing the fields
 of a structure.</p>
 <pre><code class="language-lean"><span class="boring">structure Point (α : Type u) where
@@ -253,7 +254,7 @@ of a structure.</p>
 </code></pre>
 <p>The dot notation is convenient not just for accessing the projections
 of a record, but also for applying functions defined in a namespace
-with the same name. Recall from the <a href="./propositions_and_proofs.html#_conjunction">Conjunction section</a> if <code>p</code>
+with the same name. Recall from the <a href="./propositions_and_proofs.html#conjunction">Conjunction section</a> if <code>p</code>
 has type <code>Point</code>, the expression <code>p.foo</code> is interpreted as
 <code>Point.foo p</code>, assuming that the first non-implicit argument to
 <code>foo</code> has type <code>Point</code>. The expression <code>p.add q</code> is therefore
@@ -456,6 +457,9 @@ example : rgp.red = 200 := rfl
         
         <script type="text/javascript">
             window.playground_copyable = true;
+            window.clip_buttons = true;
+            window.tryit_buttons = false;
+            window.side_bar = true;
         </script>
         
 

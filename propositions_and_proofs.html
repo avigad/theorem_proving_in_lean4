@@ -59,11 +59,11 @@
                 var theme = localStorage.getItem('mdbook-theme');
                 var sidebar = localStorage.getItem('mdbook-sidebar');
 
-                if (theme.startsWith('"') && theme.endsWith('"')) {
+                if (theme && theme.startsWith('"') && theme.endsWith('"')) {
                     localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
                 }
 
-                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                if (sidebar && sidebar.startsWith('"') && sidebar.endsWith('"')) {
                     localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
                 }
             } catch (e) { }
@@ -216,7 +216,7 @@ propositional logic, we have the rule of modus ponens:</p>
 <pre><code class="language-lean"><span class="boring">def Implies (p q : Prop) : Prop := p → q
 </span><span class="boring">structure Proof (p : Prop) : Type where
 </span><span class="boring">  proof : p
-</span>axiom modus_ponens : (p q : Prop) → Proof (Implies p q) →  Proof p → Proof q
+</span>axiom modus_ponens : (p q : Prop) → Proof (Implies p q) → Proof p → Proof q
 </code></pre>
 <p>Systems of natural deduction for propositional logic also typically rely on the following rule:</p>
 <blockquote>
@@ -313,9 +313,13 @@ variable {q : Prop}
 
 theorem t1 : p → q → p := fun hp : p =&gt; fun hq : q =&gt; hp
 </code></pre>
-<p>This looks exactly like the definition of the constant function in the
-last chapter, the only difference being that the arguments are
-elements of <code>Prop</code> rather than <code>Type</code>. Intuitively, our proof of
+<p>Compare this proof to the expression <code>fun x : α =&gt; fun y : β =&gt; x</code>
+of type <code>α → β → α</code>, where <code>α</code> and <code>β</code> are data types.
+This describes the function that takes arguments <code>x</code> and <code>y</code>
+of type <code>α</code> and <code>β</code>, respectively, and returns <code>x</code>.
+The proof of <code>t1</code> has the same form, the only difference being that
+<code>p</code> and <code>q</code> are elements of <code>Prop</code> rather than <code>Type</code>.
+Intuitively, our proof of
 <code>p → q → p</code> assumes <code>p</code> and <code>q</code> are true, and uses the first
 hypothesis (trivially) to establish that the conclusion, <code>p</code>, is
 true.</p>
@@ -383,7 +387,7 @@ element.</p>
 <pre><code class="language-lean">axiom unsound : False
 -- Everything follows from false
 theorem ex : 1 = 0 :=
-False.elim unsound
+  False.elim unsound
 </code></pre>
 <p>Declaring an &quot;axiom&quot; <code>hp : p</code> is tantamount to declaring that <code>p</code>
 is true, as witnessed by <code>hp</code>. Applying the theorem
@@ -398,8 +402,7 @@ is true, as witnessed by <code>hp</code>. Applying the theorem
 this as the assertion &quot;for every pair of propositions <code>p q</code>, we have
 <code>p → q → p</code>.&quot; For example, we can move all parameters to the right
 of the colon:</p>
-<pre><code class="language-lean">
-theorem t1 : ∀ {p q : Prop}, p → q → p :=
+<pre><code class="language-lean">theorem t1 : ∀ {p q : Prop}, p → q → p :=
   fun {p q : Prop} (hp : p) (hq : q) =&gt; hp
 </code></pre>
 <p>If <code>p</code> and <code>q</code> have been declared as variables, Lean will
@@ -418,7 +421,7 @@ theorem t1 : q → p := fun (hq : q) =&gt; hp
 <p>Lean detects that the proof uses <code>hp</code> and automatically adds
 <code>hp : p</code> as a premise. In all cases, the command <code>#print t1</code> still yields
 <code>∀ p q : Prop, p → q → p</code>. Remember that this type can just as well
-be written <code>∀ (p q : Prop) (hp : p) (hq :q), p</code>, since the arrow
+be written <code>∀ (p q : Prop) (hp : p) (hq : q), p</code>, since the arrow
 denotes nothing more than an arrow type in which the target does not
 depend on the bound variable.</p>
 <p>When we generalize <code>t1</code> in such a way, we can then apply it to
@@ -443,8 +446,8 @@ in the last chapter, now with propositions instead of types.</p>
 <pre><code class="language-lean">variable (p q r s : Prop)
 
 theorem t2 (h₁ : q → r) (h₂ : p → q) : p → r :=
-fun h₃ : p =&gt;
-show r from h₁ (h₂ h₃)
+  fun h₃ : p =&gt;
+  show r from h₁ (h₂ h₃)
 </code></pre>
 <p>As a theorem of propositional logic, what does <code>t2</code> say?</p>
 <p>Note that it is often useful to use numeric unicode subscripts,
@@ -481,10 +484,10 @@ how to &quot;introduce&quot; or establish an implication. Application can be
 viewed as an &quot;elimination rule,&quot; showing how to &quot;eliminate&quot; or use an
 implication in a proof. The other propositional connectives are
 defined in Lean's library in the file <code>Prelude.core</code> (see
-<a href="./interacting_with_lean.html#_importing_files">importing files</a> for more information on the library
+<a href="./interacting_with_lean.html#importing-files">importing files</a> for more information on the library
 hierarchy), and each connective comes with its canonical introduction
 and elimination rules.</p>
-<h3><a class="header" href="#a-name_conjunctionaconjunction" id="a-name_conjunctionaconjunction"><a name="_conjunction"></a>Conjunction</a></h3>
+<h3><a class="header" href="#conjunction" id="conjunction">Conjunction</a></h3>
 <p>The expression <code>And.intro h1 h2</code> builds a proof of <code>p ∧ q</code> using
 proofs <code>h1 : p</code> and <code>h2 : q</code>. It is common to describe
 <code>And.intro</code> as the <em>and-introduction</em> rule. In the next example we
@@ -501,7 +504,7 @@ given term has the indicated type. It is convenient for illustration,
 and we will use it often.</p>
 <p>The expression <code>And.left h</code> creates a proof of <code>p</code> from a proof
 <code>h : p ∧ q</code>. Similarly, <code>And.right h</code> is a proof of <code>q</code>. They
-are commonly known as the right and left <em>and-elimination</em> rules.</p>
+are commonly known as the left and right <em>and-elimination</em> rules.</p>
 <pre><code class="language-lean">variable (p q : Prop)
 
 example (h : p ∧ q) : p := And.left h
@@ -511,10 +514,10 @@ example (h : p ∧ q) : q := And.right h
 <pre><code class="language-lean">variable (p q : Prop)
 
 example (h : p ∧ q) : q ∧ p :=
-And.intro (And.right h) (And.left h)
+  And.intro (And.right h) (And.left h)
 </code></pre>
 <p>Notice that and-introduction and and-elimination are similar to the
-pairing and projection operations for the cartesian product. The
+pairing and projection operations for the Cartesian product. The
 difference is that given <code>hp : p</code> and <code>hq : q</code>, <code>And.intro hp hq</code> has type <code>p ∧ q : Prop</code>, while <code>Prod hp hq</code> has type
 <code>p × q : Type</code>. The similarity between <code>∧</code> and <code>×</code> is another instance
 of the Curry-Howard isomorphism, but in contrast to implication and
@@ -552,6 +555,7 @@ thing:</p>
 <code>And.left h</code> and <code>h.right</code> for <code>And.right h</code>. We can therefore
 rewrite the sample proof above conveniently as follows:</p>
 <pre><code class="language-lean">variable (p q : Prop)
+
 example (h : p ∧ q) : q ∧ p :=
   ⟨h.right, h.left⟩
 </code></pre>
@@ -565,10 +569,10 @@ to flatten nested constructors that associate to the right, so that
 these two proofs are equivalent:</p>
 <pre><code class="language-lean">variable (p q : Prop)
 
-example (h : p ∧ q) : q ∧ p ∧ q:=
+example (h : p ∧ q) : q ∧ p ∧ q :=
   ⟨h.right, ⟨h.left, h.right⟩⟩
 
-example (h : p ∧ q) : q ∧ p ∧ q:=
+example (h : p ∧ q) : q ∧ p ∧ q :=
   ⟨h.right, h.left, h.right⟩
 </code></pre>
 <p>This is often useful as well.</p>
@@ -595,7 +599,7 @@ example (h : p ∨ q) : q ∨ p :=
     (fun hp : p =&gt;
       show q ∨ p from Or.intro_right q hp)
     (fun hq : q =&gt;
-     show q ∨ p from Or.intro_left p hq)
+      show q ∨ p from Or.intro_left p hq)
 </code></pre>
 <p>In most cases, the first argument of <code>Or.intro_right</code> and
 <code>Or.intro_left</code> can be inferred automatically by Lean. Lean
@@ -638,7 +642,7 @@ example (hpq : p → q) (hnq : ¬q) : ¬p :=
 <code>False.elim</code>, which expresses the fact that anything follows from a
 contradiction. This rule is sometimes called <em>ex falso</em> (short for <em>ex
 falso sequitur quodlibet</em>), or the <em>principle of explosion</em>.</p>
-<pre><code class="language-lean">variable (tp q : Prop)
+<pre><code class="language-lean">variable (p q : Prop)
 
 example (hp : p) (hnp : ¬p) : q := False.elim (hnp hp)
 </code></pre>
@@ -724,7 +728,7 @@ example (h : p ∧ q) : q ∧ p :=
 to show that it indeed suffices to show <code>q</code>, by proving the original
 goal of <code>q ∧ p</code> with the additional hypothesis <code>hq : q</code>. Finally,
 we have to show <code>q</code>.</p>
-<h2><a class="header" href="#a-name_classicalaclassical-logic" id="a-name_classicalaclassical-logic"><a name="_classical"></a>Classical Logic</a></h2>
+<h2><a class="header" href="#classical-logic" id="classical-logic">Classical Logic</a></h2>
 <p>The introduction and elimination rules we have seen so far are all
 constructive, which is to say, they reflect a computational
 understanding of the logical connectives based on the
@@ -781,11 +785,9 @@ for you to get a sense of where classical reasoning is used.  It is
 needed in the following example because, from a constructive
 standpoint, knowing that <code>p</code> and <code>q</code> are not both true does not
 necessarily tell you which one is false:</p>
-<pre><code class="language-lean">open Classical
-variable (p q : Prop)
-
--- BEGIN
-example (h : ¬(p ∧ q)) : ¬p ∨ ¬q :=
+<pre><code class="language-lean"><span class="boring">open Classical
+</span><span class="boring">variable (p q : Prop)
+</span>example (h : ¬(p ∧ q)) : ¬p ∨ ¬q :=
   Or.elim (em p)
     (fun hp : p =&gt;
       Or.inr
@@ -800,7 +802,7 @@ where principles like excluded middle and double-negation elimination
 are permissible, and Lean supports the use of classical reasoning in
 such contexts without relying on excluded middle.</p>
 <p>The full list of axioms that are used in Lean to support classical
-reasoning are discussed in <a href="./axioms_and_computations.html">Axioms and Computations</a>.</p>
+reasoning are discussed in <a href="./axioms_and_computation.html">Axioms and Computation</a>.</p>
 <h2><a class="header" href="#examples-of-propositional-validities" id="examples-of-propositional-validities">Examples of Propositional Validities</a></h2>
 <p>Lean's standard library contains proofs of many valid statements of
 propositional logic, all of which you are free to use in proofs of
@@ -860,7 +862,7 @@ an underscore <code>_</code> as a placeholder. Recall this tells Lean that
 the argument is implicit, and should be filled in automatically. If
 Lean tries to do so and fails, it returns with an error message &quot;don't
 know how to synthesize placeholder,&quot; followed by the type of
-the term it is expecting, and all the objects and hypothesis available
+the term it is expecting, and all the objects and hypotheses available
 in the context. In other words, for each unresolved placeholder, Lean
 reports the subgoal that needs to be filled at that point. You can
 then construct a proof by incrementally filling in these placeholders.</p>
@@ -931,9 +933,9 @@ example : (p → q) → (¬q → ¬p) := sorry
 with actual proofs. These require classical reasoning.</p>
 <pre><code class="language-lean">open Classical
 
-variable (p q r s : Prop)
+variable (p q r : Prop)
 
-example : (p → r ∨ s) → ((p → r) ∨ (p → s)) := sorry
+example : (p → q ∨ r) → ((p → q) ∨ (p → r)) := sorry
 example : ¬(p ∧ q) → ¬p ∨ ¬q := sorry
 example : ¬(p → q) → p ∧ ¬q := sorry
 example : (p → q) → (¬p ∨ q) := sorry
@@ -989,6 +991,9 @@ example : (((p → q) → p) → p) := sorry
         
         <script type="text/javascript">
             window.playground_copyable = true;
+            window.clip_buttons = true;
+            window.tryit_buttons = false;
+            window.side_bar = true;
         </script>
         
 

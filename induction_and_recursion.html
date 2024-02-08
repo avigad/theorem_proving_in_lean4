@@ -59,11 +59,11 @@
                 var theme = localStorage.getItem('mdbook-theme');
                 var sidebar = localStorage.getItem('mdbook-sidebar');
 
-                if (theme.startsWith('"') && theme.endsWith('"')) {
+                if (theme && theme.startsWith('"') && theme.endsWith('"')) {
                     localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
                 }
 
-                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                if (sidebar && sidebar.startsWith('"') && sidebar.endsWith('"')) {
                     localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
                 }
             } catch (e) { }
@@ -205,7 +205,7 @@ def isZero : Nat → Bool
   | zero   =&gt; true
   | succ x =&gt; false
 </code></pre>
-<p>The equations used to define these function hold definitionally:</p>
+<p>The equations used to define these functions hold definitionally:</p>
 <pre><code class="language-lean"><span class="boring">open Nat
 </span><span class="boring">def sub1 : Nat → Nat
 </span><span class="boring">  | zero   =&gt; zero
@@ -232,7 +232,7 @@ def isZero : Nat → Bool
   | x+1 =&gt; false
 </code></pre>
 <p>Because addition and the zero notation have been assigned the
-<code>[matchPattern]</code> attribute, they can be used in pattern matching. Lean
+<code>[match_pattern]</code> attribute, they can be used in pattern matching. Lean
 simply normalizes these expressions until the constructors <code>zero</code>
 and <code>succ</code> are exposed.</p>
 <p>Pattern matching works with any inductive type, such as products and option types:</p>
@@ -354,12 +354,12 @@ known as a <em>wildcard pattern</em>, or an <em>anonymous variable</em>. In cont
 to usage outside the equation compiler, here the underscore does <em>not</em>
 indicate an implicit argument. The use of underscores for wildcards is
 common in functional programming languages, and so Lean adopts that
-notation. <a href="#wildcards_and_overlapping_patterns">Section wildcards and overlapping patterns</a>
-expands on the notion of a wildcard, and <a href="#inaccessible_terms">Section Inaccessible Patterns</a> explains how
+notation. <a href="#wildcards-and-overlapping-patterns">Section Wildcards and Overlapping Patterns</a>
+expands on the notion of a wildcard, and <a href="#inaccessible-patterns">Section Inaccessible Patterns</a> explains how
 you can use implicit arguments in patterns as well.</p>
 <p>As described in <a href="./inductive_types.html">Chapter Inductive Types</a>,
 inductive data types can depend on parameters. The following example defines
-the <code>tail</code> function using pattern matching. The argument <code>α : Type</code>
+the <code>tail</code> function using pattern matching. The argument <code>α : Type u</code>
 is a parameter and occurs before the colon to indicate it does not participate in the pattern matching.
 Lean also allows parameters to occur after <code>:</code>, but it cannot pattern match on them.</p>
 <pre><code class="language-lean">def tail1 {α : Type u} : List α → List α
@@ -371,19 +371,20 @@ def tail2 : {α : Type u} → List α → List α
   | α, a :: as =&gt; as
 </code></pre>
 <p>Despite the different placement of the parameter <code>α</code> in these two
-examples, in both cases it treated in the same way, in that it does
+examples, in both cases it is treated in the same way, in that it does
 not participate in a case split.</p>
 <p>Lean can also handle more complex forms of pattern matching, in which
 arguments to dependent types pose additional constraints on the
 various cases. Such examples of <em>dependent pattern matching</em> are
-considered in the <a href="#dependent_pattern_matching">Section Dependent Pattern Matching</a>.</p>
-<h2><a class="header" href="#a-namewildcards_and_overlapping_patternsawildcards-and-overlapping-patterns" id="a-namewildcards_and_overlapping_patternsawildcards-and-overlapping-patterns"><a name="wildcards_and_overlapping_patterns"></a>Wildcards and Overlapping Patterns</a></h2>
+considered in the <a href="#dependent-pattern-matching">Section Dependent Pattern Matching</a>.</p>
+<h2><a class="header" href="#wildcards-and-overlapping-patterns" id="wildcards-and-overlapping-patterns">Wildcards and Overlapping Patterns</a></h2>
 <p>Consider one of the examples from the last section:</p>
 <pre><code class="language-lean">def foo : Nat → Nat → Nat
   | 0,   n   =&gt; 0
   | m+1, 0   =&gt; 1
   | m+1, n+1 =&gt; 2
 </code></pre>
+<p>An alternative presentation is:</p>
 <pre><code class="language-lean">def foo : Nat → Nat → Nat
   | 0, n =&gt; 0
   | m, 0 =&gt; 1
@@ -420,7 +421,7 @@ that there is an element of <code>α</code>; in the <a href="./type_classes.html
 we will see that Lean can be instructed that suitable
 base types are inhabited, and can automatically infer that other
 constructed types are inhabited. On this basis, the
-standard library provides an arbitrary element, <code>arbitrary</code>, of
+standard library provides a default element, <code>default</code>, of
 any inhabited type.</p>
 <p>We can also use the type <code>Option α</code> to simulate incomplete patterns.
 The idea is to return <code>some a</code> for the provided patterns, and use
@@ -429,12 +430,12 @@ both approaches.</p>
 <pre><code class="language-lean">def f1 : Nat → Nat → Nat
   | 0, _  =&gt; 1
   | _, 0  =&gt; 2
-  | _, _  =&gt; arbitrary  -- the &quot;incomplete&quot; case
+  | _, _  =&gt; default  -- the &quot;incomplete&quot; case
 
-example : f1 0     0     = 1 := rfl
-example : f1 0     (a+1) = 1 := rfl
-example : f1 (a+1) 0     = 2 := rfl
-example : f1 (a+1) (b+1) = arbitrary := rfl
+example : f1 0     0     = 1       := rfl
+example : f1 0     (a+1) = 1       := rfl
+example : f1 (a+1) 0     = 2       := rfl
+example : f1 (a+1) (b+1) = default := rfl
 
 def f2 : Nat → Nat → Option Nat
   | 0, _  =&gt; some 1
@@ -465,7 +466,7 @@ not been covered.</p>
 
 #print foo.match_1
 </code></pre>
-<h2><a class="header" href="#a-namestructural_recursion_and_inductionastructural-recursion-and-induction" id="a-namestructural_recursion_and_inductionastructural-recursion-and-induction"><a name="structural_recursion_and_induction"></a>Structural Recursion and Induction</a></h2>
+<h2><a class="header" href="#structural-recursion-and-induction" id="structural-recursion-and-induction">Structural Recursion and Induction</a></h2>
 <p>What makes the equation compiler powerful is that it also supports
 recursive definitions. In the next three sections, we will describe,
 respectively:</p>
@@ -486,15 +487,15 @@ is any type, which can depend on <code>a</code> and <code>b</code>. Each line sh
 contain the same number of patterns, one for each element of <code>β</code>. As we
 have seen, a pattern is either a variable, a constructor applied to
 other patterns, or an expression that normalizes to something of that
-form (where the non-constructors are marked with the <code>[matchPattern]</code>
+form (where the non-constructors are marked with the <code>[match_pattern]</code>
 attribute). The appearances of constructors prompt case splits, with
 the arguments to the constructors represented by the given
-variables. In <a href="#dependent_pattern_matching">Section Dependent Pattern Matching</a>,
+variables. In <a href="#dependent-pattern-matching">Section Dependent Pattern Matching</a>,
 we will see that it is sometimes necessary to include explicit terms in patterns that
 are needed to make an expression type check, though they do not play a
 role in pattern matching. These are called &quot;inaccessible patterns&quot; for
 that reason. But we will not need to use such inaccessible patterns
-before <a href="#dependent_pattern_matching">Section Dependent Pattern Matching</a>.</p>
+before <a href="#dependent-pattern-matching">Section Dependent Pattern Matching</a>.</p>
 <p>As we saw in the last section, the terms <code>t₁, ..., tₙ</code> can make use
 of any of the parameters <code>a</code>, as well as any of the variables that
 are introduced in the corresponding patterns. What makes recursion and
@@ -542,36 +543,6 @@ proofs of <code>zero_add</code> work:</p>
   | zero   =&gt; by simp [add]
   | succ n =&gt; by simp [add, zero_add]
 </code></pre>
-<!--
-In fact, because in this case the defining equations hold
-definitionally, we can use `dsimp`, the simplifier that uses
-definitional reductions only, to carry out the first step.
-
-.. code-block:: lean
-
-    namespace hidden
-
-    inductive nat : Type
-    | zero : nat
-    | succ : nat → nat
-
-    namespace nat
-
-    def add : nat → nat → nat
-    | m zero     := m
-    | m (succ n) := succ (add m n)
-
-    local infix ` + ` := add
-
-    -- BEGIN
-    theorem zero_add : ∀ n, zero + n = n
-    | zero     := by dsimp [add]; reflexivity
-    | (succ n) := by dsimp [add]; rw [zero_add n]
-    -- END
-
-    end nat
-    end hidden
--->
 <p>As with definition by pattern matching, parameters to a structural
 recursion or induction may appear before the colon. Such parameters
 are simply added to the local context before the definition is
@@ -605,10 +576,10 @@ example : fib 7 = 21 := rfl
 definitionally equal to <code>succ (succ n)</code>) is defined in terms of the
 values at <code>n + 1</code> (which is definitionally equivalent to <code>succ n</code>)
 and the value at <code>n</code>. This is a notoriously inefficient way of
-computing the fibonacci function, however, with an execution time that
+computing the Fibonacci function, however, with an execution time that
 is exponential in <code>n</code>. Here is a better way:</p>
 <pre><code class="language-lean">def fibFast (n : Nat) : Nat :=
-  (loop n).1
+  (loop n).2
 where
   loop : Nat → Nat × Nat
     | 0   =&gt; (0, 1)
@@ -621,7 +592,7 @@ where
   let rec loop : Nat → Nat × Nat
     | 0   =&gt; (0, 1)
     | n+1 =&gt; let p := loop n; (p.2, p.1 + p.2)
-  (loop n).1
+  (loop n).2
 </code></pre>
 <p>In both cases, Lean generates the auxiliary function <code>fibFast.loop</code>.</p>
 <p>To handle structural recursion, the equation compiler uses
@@ -673,8 +644,58 @@ example : append [1, 2, 3] [4, 5] = [1, 2, 3, 4, 5] := rfl
 -- [5, 7, 9]
 </code></pre>
 <p>You are encouraged to experiment with similar examples in the exercises below.</p>
-<h2><a class="header" href="#a-name_well_founded_recursion_and_inductiona-well-founded-recursion-and-induction" id="a-name_well_founded_recursion_and_inductiona-well-founded-recursion-and-induction"><a name="_well_founded_recursion_and_induction:"></a> Well-Founded Recursion and Induction</a></h2>
-<p>Dependent type theory is powerful enough to encode and justify
+<h2><a class="header" href="#local-recursive-declarations" id="local-recursive-declarations">Local recursive declarations</a></h2>
+<p>You can define local recursive declarations using the <code>let rec</code> keyword.</p>
+<pre><code class="language-lean">def replicate (n : Nat) (a : α) : List α :=
+  let rec loop : Nat → List α → List α
+    | 0,   as =&gt; as
+    | n+1, as =&gt; loop n (a::as)
+  loop n []
+
+#check @replicate.loop
+-- {α : Type} → α → Nat → List α → List α
+</code></pre>
+<p>Lean creates an auxiliary declaration for each <code>let rec</code>. In the example above,
+it created the declaration <code>replicate.loop</code> for the <code>let rec loop</code> occurring at <code>replicate</code>.
+Note that, Lean &quot;closes&quot; the declaration by adding any local variable occurring in the
+<code>let rec</code> declaration as additional parameters. For example, the local variable <code>a</code> occurs
+at <code>let rec loop</code>.</p>
+<p>You can also use <code>let rec</code> in tactic mode and for creating proofs by induction.</p>
+<pre><code class="language-lean"><span class="boring">def replicate (n : Nat) (a : α) : List α :=
+</span><span class="boring"> let rec loop : Nat → List α → List α
+</span><span class="boring">   | 0,   as =&gt; as
+</span><span class="boring">   | n+1, as =&gt; loop n (a::as)
+</span><span class="boring"> loop n []
+</span>theorem length_replicate (n : Nat) (a : α) : (replicate n a).length = n := by
+  let rec aux (n : Nat) (as : List α)
+              : (replicate.loop a n as).length = n + as.length := by
+    match n with
+    | 0   =&gt; simp [replicate.loop]
+    | n+1 =&gt; simp [replicate.loop, aux n, Nat.add_succ, Nat.succ_add]
+  exact aux n []
+</code></pre>
+<p>You can also introduce auxiliary recursive declarations using <code>where</code> clause after your definition.
+Lean converts them into a <code>let rec</code>.</p>
+<pre><code class="language-lean">def replicate (n : Nat) (a : α) : List α :=
+  loop n []
+where
+  loop : Nat → List α → List α
+    | 0,   as =&gt; as
+    | n+1, as =&gt; loop n (a::as)
+
+theorem length_replicate (n : Nat) (a : α) : (replicate n a).length = n := by
+  exact aux n []
+where
+  aux (n : Nat) (as : List α)
+      : (replicate.loop a n as).length = n + as.length := by
+    match n with
+    | 0   =&gt; simp [replicate.loop]
+    | n+1 =&gt; simp [replicate.loop, aux n, Nat.add_succ, Nat.succ_add]
+</code></pre>
+<h2><a class="header" href="#well-founded-recursion-and-induction" id="well-founded-recursion-and-induction">Well-Founded Recursion and Induction</a></h2>
+<p>When structural recursion cannot be used, we can prove termination using well-founded recursion.
+We need a well-founded relation and a proof that each recursive application is decreasing with respect to
+this relation. Dependent type theory is powerful enough to encode and justify
 well-founded recursion. Let us start with the logical background that
 is needed to understand how it works.</p>
 <p>Lean's standard library defines two predicates, <code>Acc r a</code> and
@@ -701,8 +722,7 @@ relation on a type <code>α</code>, we should have a principle of well-founded
 recursion on <code>α</code>, with respect to the relation <code>r</code>. And, indeed,
 we do: the standard library defines <code>WellFounded.fix</code>, which serves
 exactly that purpose.</p>
-<pre><code class="language-lean">set_option codegen false
-def f {α : Sort u}
+<pre><code class="language-lean">noncomputable def f {α : Sort u}
       (r : α → α → Prop)
       (h : WellFounded r)
       (C : α → Sort v)
@@ -721,7 +741,7 @@ each predecessor <code>y</code> of <code>x</code>.</p>
 principle. It says that if <code>≺</code> is well founded and you want to prove
 <code>∀ x, C x</code>, it suffices to show that for an arbitrary <code>x</code>, if we
 have <code>∀ y ≺ x, C y</code>, then we have <code>C x</code>.</p>
-<p>In the example above we set the option <code>codegen</code> to false because the code
+<p>In the example above we use the modifier <code>noncomputable</code> because the code
 generator currently does not support <code>WellFounded.fix</code>. The function
 <code>WellFounded.fix</code> is another tool Lean uses to justify that a function
 terminates.</p>
@@ -731,17 +751,16 @@ founded orders from others, for example, using lexicographic order.</p>
 <p>Here is essentially the definition of division on the natural numbers that is found in the standard library.</p>
 <pre><code class="language-lean">open Nat
 
-theorem div_rec_lemma {x y : Nat} : 0 &lt; y ∧ y ≤ x → x - y &lt; x :=
+theorem div_lemma {x y : Nat} : 0 &lt; y ∧ y ≤ x → x - y &lt; x :=
   fun h =&gt; sub_lt (Nat.lt_of_lt_of_le h.left h.right) h.left
 
 def div.F (x : Nat) (f : (x₁ : Nat) → x₁ &lt; x → Nat → Nat) (y : Nat) : Nat :=
   if h : 0 &lt; y ∧ y ≤ x then
-    f (x - y) (div_rec_lemma h) y + 1
+    f (x - y) (div_lemma h) y + 1
   else
     zero
 
-set_option codegen false
-def div := WellFounded.fix Nat.lt_wf div.F
+noncomputable def div := WellFounded.fix (measure id).wf div.F
 
 #reduce div 8 2 -- 4
 </code></pre>
@@ -751,193 +770,273 @@ function for that fixed <code>x</code>. You have to remember that the second
 argument to <code>div.F</code>, the recipe for the recursion, is a function
 that is supposed to return the divide by <code>y</code> function for all values
 <code>x₁</code> smaller than <code>x</code>.</p>
-<p>The equation compiler is designed to make definitions like this more
+<p>The elaborator is designed to make definitions like this more
 convenient. It accepts the following:</p>
-<p><strong>TODO: waiting for well-founded support in Lean 4</strong></p>
-<p>.. code-block:: lean</p>
-<pre><code>namespace hidden
-open nat
-
--- BEGIN
-def div : ℕ → ℕ → ℕ
-| x y :=
+<pre><code class="language-lean">def div (x y : Nat) : Nat :=
   if h : 0 &lt; y ∧ y ≤ x then
-    have x - y &lt; x,
-      from sub_lt (lt_of_lt_of_le h.left h.right) h.left,
+    have : x - y &lt; x := Nat.sub_lt (Nat.lt_of_lt_of_le h.1 h.2) h.1
     div (x - y) y + 1
   else
     0
--- END
-
-end hidden
 </code></pre>
-<p>When the equation compiler encounters a recursive definition, it first
+<p>When Lean encounters a recursive definition, it first
 tries structural recursion, and only when that fails, does it fall
-back on well-founded recursion. In this case, detecting the
-possibility of well-founded recursion on the natural numbers, it uses
-the usual lexicographic ordering on the pair <code>(x, y)</code>. The equation
-compiler in and of itself is not clever enough to derive that <code>x - y</code> is less than <code>x</code> under the given hypotheses, but we can help it
-out by putting this fact in the local context. The equation compiler
-looks in the local context for such information, and, when it finds
-it, puts it to good use.</p>
+back on well-founded recursion. Lean uses the tactic <code>decreasing_tactic</code>
+to show that the recursive applications are smaller. The auxiliary
+proposition <code>x - y &lt; x</code> in the example above should be viewed as a hint
+for this tactic.</p>
 <p>The defining equation for <code>div</code> does <em>not</em> hold definitionally, but
-the equation is available to <code>rewrite</code> and <code>simp</code>. The simplifier
-will loop if you apply it blindly, but <code>rewrite</code> will do the trick.</p>
-<p>.. code-block:: lean</p>
-<pre><code>namespace hidden
-open nat
+we can unfold <code>div</code> using the <code>unfold</code> tactic. We use <a href="./conv.html"><code>conv</code></a> to select which
+<code>div</code> application we want to unfold.</p>
+<pre><code class="language-lean"><span class="boring">def div (x y : Nat) : Nat :=
+</span><span class="boring"> if h : 0 &lt; y ∧ y ≤ x then
+</span><span class="boring">   have : x - y &lt; x := Nat.sub_lt (Nat.lt_of_lt_of_le h.1 h.2) h.1
+</span><span class="boring">   div (x - y) y + 1
+</span><span class="boring"> else
+</span><span class="boring">   0
+</span>example (x y : Nat) : div x y = if 0 &lt; y ∧ y ≤ x then div (x - y) y + 1 else 0 := by
+  conv =&gt; lhs; unfold div -- unfold occurrence in the left-hand-side of the equation
 
-def div : ℕ → ℕ → ℕ
-| x y :=
-  if h : 0 &lt; y ∧ y ≤ x then
-    have x - y &lt; x,
-      from sub_lt (lt_of_lt_of_le h.left h.right) h.left,
-    div (x - y) y + 1
-  else
-    0
-
--- BEGIN
-example (x y : ℕ) :
-  div x y = if 0 &lt; y ∧ y ≤ x then div (x - y) y + 1 else 0 :=
-by rw [div]
-
-example (x y : ℕ) (h : 0 &lt; y ∧ y ≤ x) :
-  div x y = div (x - y) y + 1 :=
-by rw [div, if_pos h]
--- END
-
-end hidden
+example (x y : Nat) (h : 0 &lt; y ∧ y ≤ x) : div x y = div (x - y) y + 1 := by
+  conv =&gt; lhs; unfold div
+  simp [h]
 </code></pre>
 <p>The following example is similar: it converts any natural number to a
 binary expression, represented as a list of 0's and 1's. We have to
-provide the equation compiler with evidence that the recursive call is
+provide evidence that the recursive call is
 decreasing, which we do here with a <code>sorry</code>. The <code>sorry</code> does not
-prevent the bytecode evaluator from evaluating the function
-successfully.</p>
-<p>.. code-block:: lean</p>
-<pre><code>def nat_to_bin : ℕ → list ℕ
-| 0       := [0]
-| 1       := [1]
-| (n + 2) :=
-  have (n + 2) / 2 &lt; n + 2, from sorry,
-  nat_to_bin ((n + 2) / 2) ++ [n % 2]
+prevent the interpreter from evaluating the function successfully.</p>
+<pre><code class="language-lean">def natToBin : Nat → List Nat
+  | 0     =&gt; [0]
+  | 1     =&gt; [1]
+  | n + 2 =&gt;
+    have : (n + 2) / 2 &lt; n + 2 := sorry
+    natToBin ((n + 2) / 2) ++ [n % 2]
 
-#eval nat_to_bin 1234567
+#eval natToBin 1234567
 </code></pre>
 <p>As a final example, we observe that Ackermann's function can be
 defined directly, because it is justified by the well foundedness of
-the lexicographic order on the natural numbers.</p>
-<p>.. code-block:: lean</p>
-<pre><code>def ack : nat → nat → nat
-| 0     y     := y+1
-| (x+1) 0     := ack x 1
-| (x+1) (y+1) := ack x (ack (x+1) y)
-
-#eval ack 3 5
+the lexicographic order on the natural numbers. The <code>termination_by</code> clause
+instructs Lean to use a lexicographic order. This clause is actually mapping
+the function arguments to elements of type <code>Nat × Nat</code>. Then, Lean uses typeclass
+resolution to synthesize an element of type <code>WellFoundedRelation (Nat × Nat)</code>.</p>
+<pre><code class="language-lean">def ack : Nat → Nat → Nat
+  | 0,   y   =&gt; y+1
+  | x+1, 0   =&gt; ack x 1
+  | x+1, y+1 =&gt; ack x (ack (x+1) y)
+termination_by x y =&gt; (x, y)
 </code></pre>
-<p>Lean's mechanisms for guessing a well-founded relation and then
-proving that recursive calls decrease are still in a rudimentary
-state. They will be improved over time. When they work, they provide a
-much more convenient way of defining functions than using
-<code>WellFounded.fix</code> manually. When they don't, the latter is always
-available as a backup.</p>
-<p>.. TO DO: eventually, describe using_well_founded.</p>
-<p>.. _nested_and_mutual_recursion:</p>
-<h2><a class="header" href="#a-name_nested_and_mutual_recursiona-mutual-recursion" id="a-name_nested_and_mutual_recursiona-mutual-recursion"><a name="_nested_and_mutual_recursion"></a> Mutual Recursion</a></h2>
-<p><strong>TODO: waiting for well-founded support in Lean 4</strong></p>
-<p>Lean also supports mutual recursive definitions. The syntax is similar to that for mutual inductive types, as described in :numref:<code>mutual_and_nested_inductive_types</code>. Here is an example:</p>
-<p>.. code-block:: lean</p>
-<pre><code>mutual def even, odd
-with even : nat → bool
-| 0     := tt
-| (a+1) := odd a
-with odd : nat → bool
-| 0     := ff
-| (a+1) := even a
+<p>Note that a lexicographic order is used in the example above because the instance
+<code>WellFoundedRelation (α × β)</code> uses a lexicographic order. Lean also defines the instance</p>
+<pre><code class="language-lean">instance (priority := low) [SizeOf α] : WellFoundedRelation α :=
+  sizeOfWFRel
+</code></pre>
+<p>In the following example, we prove termination by showing that <code>as.size - i</code> is decreasing
+in the recursive application.</p>
+<pre><code class="language-lean">def takeWhile (p : α → Bool) (as : Array α) : Array α :=
+  go 0 #[]
+where
+  go (i : Nat) (r : Array α) : Array α :=
+    if h : i &lt; as.size then
+      let a := as.get ⟨i, h⟩
+      if p a then
+        go (i+1) (r.push a)
+      else
+        r
+    else
+      r
+  termination_by as.size - i
+</code></pre>
+<p>Note that, auxiliary function <code>go</code> is recursive in this example, but <code>takeWhile</code> is not.</p>
+<p>By default, Lean uses the tactic <code>decreasing_tactic</code> to prove recursive applications are decreasing. The modifier <code>decreasing_by</code> allows us to provide our own tactic. Here is an example.</p>
+<pre><code class="language-lean">theorem div_lemma {x y : Nat} : 0 &lt; y ∧ y ≤ x → x - y &lt; x :=
+  fun ⟨ypos, ylex⟩ =&gt; Nat.sub_lt (Nat.lt_of_lt_of_le ypos ylex) ypos
 
-example (a : nat) : even (a + 1) = odd a :=
-by simp [even]
+def div (x y : Nat) : Nat :=
+  if h : 0 &lt; y ∧ y ≤ x then
+    div (x - y) y + 1
+  else
+    0
+decreasing_by apply div_lemma; assumption
+</code></pre>
+<p>Note that <code>decreasing_by</code> is not replacement for <code>termination_by</code>, they complement each other. <code>termination_by</code> is used to specify a well-founded relation, and <code>decreasing_by</code> for providing our own tactic for showing recursive applications are decreasing. In the following example, we use both of them.</p>
+<pre><code class="language-lean">def ack : Nat → Nat → Nat
+  | 0,   y   =&gt; y+1
+  | x+1, 0   =&gt; ack x 1
+  | x+1, y+1 =&gt; ack x (ack (x+1) y)
+termination_by x y =&gt; (x, y)
+decreasing_by
+  all_goals simp_wf -- unfolds well-founded recursion auxiliary definitions
+  · apply Prod.Lex.left; simp_arith
+  · apply Prod.Lex.right; simp_arith
+  · apply Prod.Lex.left; simp_arith
+</code></pre>
+<p>We can use <code>decreasing_by sorry</code> to instruct Lean to &quot;trust&quot; us that the function terminates.</p>
+<pre><code class="language-lean">def natToBin : Nat → List Nat
+  | 0     =&gt; [0]
+  | 1     =&gt; [1]
+  | n + 2 =&gt; natToBin ((n + 2) / 2) ++ [n % 2]
+decreasing_by sorry
 
-example (a : nat) : odd (a + 1) = even a :=
-by simp [odd]
+#eval natToBin 1234567
+</code></pre>
+<p>Recall that using <code>sorry</code> is equivalent to using a new axiom, and should be avoided. In the following example, we used the <code>sorry</code> to prove <code>False</code>. The command <code>#print axioms</code> shows that <code>unsound</code> depends on the unsound axiom <code>sorryAx</code> used to implement <code>sorry</code>.</p>
+<pre><code class="language-lean">def unsound (x : Nat) : False :=
+  unsound (x + 1)
+decreasing_by sorry
 
-lemma even_eq_not_odd : ∀ a, even a = bnot (odd a) :=
-begin
-  intro a, induction a,
-  simp [even, odd],
-  simp [*, even, odd]
+#check unsound 0
+-- `unsound 0` is a proof of `False`
+
+#print axioms unsound
+-- 'unsound' depends on axioms: [sorryAx]
+</code></pre>
+<p>Summary:</p>
+<ul>
+<li>
+<p>If there is no <code>termination_by</code>, a well-founded relation is derived (if possible) by selecting an argument and then using typeclass resolution to synthesize a well-founded relation for this argument's type.</p>
+</li>
+<li>
+<p>If <code>termination_by</code> is specified, it maps the arguments of the function to a type <code>α</code> and type class resolution is again used. Recall that, the default instance for <code>β × γ</code> is a lexicographic order based on the well-founded relations for <code>β</code> and <code>γ</code>.</p>
+</li>
+<li>
+<p>The default well-founded relation instance for <code>Nat</code> is <code>&lt;</code>.</p>
+</li>
+<li>
+<p>By default, the tactic <code>decreasing_tactic</code> is used to show that recursive applications are smaller with respect to the selected well-founded relation. If <code>decreasing_tactic</code> fails, the error message includes the remaining goal <code>... |- G</code>. Note that, the <code>decreasing_tactic</code> uses <code>assumption</code>. So, you can include a <code>have</code>-expression to prove goal <code>G</code>. You can also provide your own tactic using <code>decreasing_by</code>.</p>
+</li>
+</ul>
+<h2><a class="header" href="#mutual-recursion" id="mutual-recursion">Mutual Recursion</a></h2>
+<p>Lean also supports mutual recursive definitions. The syntax is similar to that for mutual inductive types. Here is an example:</p>
+<pre><code class="language-lean">mutual
+  def even : Nat → Bool
+    | 0   =&gt; true
+    | n+1 =&gt; odd n
+
+  def odd : Nat → Bool
+    | 0   =&gt; false
+    | n+1 =&gt; even n
+end
+
+example : even (a + 1) = odd a := by
+  simp [even]
+
+example : odd (a + 1) = even a := by
+  simp [odd]
+
+theorem even_eq_not_odd : ∀ a, even a = not (odd a) := by
+  intro a; induction a
+  . simp [even, odd]
+  . simp [even, odd, *]
+</code></pre>
+<p>What makes this a mutual definition is that <code>even</code> is defined recursively in terms of <code>odd</code>, while <code>odd</code> is defined recursively in terms of <code>even</code>. Under the hood, this is compiled as a single recursive definition. The internally defined function takes, as argument, an element of a sum type, either an input to <code>even</code>, or an input to <code>odd</code>. It then returns an output appropriate to the input. To define that function, Lean uses a suitable well-founded measure. The internals are meant to be hidden from users; the canonical way to make use of such definitions is to use <code>simp</code> (or <code>unfold</code>), as we did above.</p>
+<p>Mutual recursive definitions also provide natural ways of working with mutual and nested inductive types. Recall the definition of <code>Even</code> and <code>Odd</code> as mutual inductive predicates as presented before.</p>
+<pre><code class="language-lean">mutual
+  inductive Even : Nat → Prop where
+    | even_zero : Even 0
+    | even_succ : ∀ n, Odd n → Even (n + 1)
+
+  inductive Odd : Nat → Prop where
+    | odd_succ : ∀ n, Even n → Odd (n + 1)
 end
 </code></pre>
-<p>What makes this a mutual definition is that <code>even</code> is defined recursively in terms of <code>odd</code>, while <code>odd</code> is defined recursively in terms of <code>even</code>. Under the hood, this is compiled as a single recursive definition. The internally defined function takes, as argument, an element of a sum type, either an input to <code>even</code>, or an input to <code>odd</code>. It then returns an output appropriate to the input. To define that function, Lean uses a suitable well-founded measure. The internals are meant to be hidden from users; the canonical way to make use of such definitions is to use <code>rewrite</code> or <code>simp</code>, as we did above.</p>
-<p>Mutual recursive definitions also provide natural ways of working with mutual and nested inductive types, as described in :numref:<code>mutual_and_nested_inductive_types</code>. Recall the definition of <code>even</code> and <code>odd</code> as mutual inductive predicates, as presented as an example there:</p>
-<p>.. code-block:: lean</p>
-<pre><code>mutual inductive even, odd
-with even : ℕ → Prop
-| even_zero : even 0
-| even_succ : ∀ n, odd n → even (n + 1)
-with odd : ℕ → Prop
-| odd_succ : ∀ n, even n → odd (n + 1)
-</code></pre>
-<p>The constructors, <code>even_zero</code>, <code>even_succ</code>, and <code>odd_succ</code> provide positive means for showing that a number is even or odd. We need to use the fact that the inductive type is generated by these constructors to know that the zero is not odd, and that the latter two implications reverse. As usual, the constructors are kept in a namespace that is named after the type being defined, and the command <code>open even odd</code> allows us to access them move conveniently.</p>
-<p>.. code-block:: lean</p>
-<pre><code>mutual inductive even, odd
-with even : ℕ → Prop
-| even_zero : even 0
-| even_succ : ∀ n, odd n → even (n + 1)
-with odd : ℕ → Prop
-| odd_succ : ∀ n, even n → odd (n + 1)
+<p>The constructors, <code>even_zero</code>, <code>even_succ</code>, and <code>odd_succ</code> provide positive means for showing that a number is even or odd. We need to use the fact that the inductive type is generated by these constructors to know that zero is not odd, and that the latter two implications reverse. As usual, the constructors are kept in a namespace that is named after the type being defined, and the command <code>open Even Odd</code> allows us to access them more conveniently.</p>
+<pre><code class="language-lean"><span class="boring">mutual
+</span><span class="boring"> inductive Even : Nat → Prop where
+</span><span class="boring">   | even_zero : Even 0
+</span><span class="boring">   | even_succ : ∀ n, Odd n → Even (n + 1)
+</span><span class="boring"> inductive Odd : Nat → Prop where
+</span><span class="boring">   | odd_succ : ∀ n, Even n → Odd (n + 1)
+</span><span class="boring">end
+</span>open Even Odd
 
--- BEGIN
-open even odd
+theorem not_odd_zero : ¬ Odd 0 :=
+  fun h =&gt; nomatch h
 
-theorem not_odd_zero : ¬ odd 0.
+theorem even_of_odd_succ : ∀ n, Odd (n + 1) → Even n
+  | _, odd_succ n h =&gt; h
 
-mutual theorem even_of_odd_succ, odd_of_even_succ
-with even_of_odd_succ : ∀ n, odd (n + 1) → even n
-| _ (odd_succ n h) := h
-with odd_of_even_succ : ∀ n, even (n + 1) → odd n
-| _ (even_succ n h) := h
--- END
+theorem odd_of_even_succ : ∀ n, Even (n + 1) → Odd n
+  | _, even_succ n h =&gt; h
 </code></pre>
 <p>For another example, suppose we use a nested inductive type to define a set of terms inductively, so that a term is either a constant (with a name given by a string), or the result of applying a constant to a list of constants.</p>
-<p>.. code-block:: lean</p>
-<pre><code>inductive term
-| const : string → term
-| app   : string → list term → term
+<pre><code class="language-lean">inductive Term where
+  | const : String → Term
+  | app   : String → List Term → Term
 </code></pre>
 <p>We can then use a mutual recursive definition to count the number of constants occurring in a term, as well as the number occurring in a list of terms.</p>
-<p>.. code-block:: lean</p>
-<pre><code>inductive term
-| const : string → term
-| app   : string → list term → term
+<pre><code class="language-lean"><span class="boring">inductive Term where
+</span><span class="boring"> | const : String → Term
+</span><span class="boring"> | app   : String → List Term → Term
+</span>namespace Term
 
--- BEGIN
-open term
+mutual
+  def numConsts : Term → Nat
+    | const _ =&gt; 1
+    | app _ cs =&gt; numConstsLst cs
 
-mutual def num_consts, num_consts_lst
-with num_consts : term → nat
-| (term.const n)  := 1
-| (term.app n ts) := num_consts_lst ts
-with num_consts_lst : list term → nat
-| []      := 0
-| (t::ts) := num_consts t + num_consts_lst ts
+  def numConstsLst : List Term → Nat
+    | [] =&gt; 0
+    | c :: cs =&gt; numConsts c + numConstsLst cs
+end
 
-def sample_term := app &quot;f&quot; [app &quot;g&quot; [const &quot;x&quot;], const &quot;y&quot;]
+def sample := app &quot;f&quot; [app &quot;g&quot; [const &quot;x&quot;], const &quot;y&quot;]
 
-#eval num_consts sample_term
--- END
+#eval numConsts sample
+
+end Term
 </code></pre>
-<h2><a class="header" href="#a-name_dependent_pattern_matchinga-dependent-pattern-matching" id="a-name_dependent_pattern_matchinga-dependent-pattern-matching"><a name="_dependent_pattern_matching"></a> Dependent Pattern Matching</a></h2>
+<p>As a final example, we define a function <code>replaceConst a b e</code> that replaces a constant <code>a</code> with <code>b</code> in a term <code>e</code>, and then prove the number of constants is the same. Note that, our proof uses mutual recursion (aka induction).</p>
+<pre><code class="language-lean"><span class="boring">inductive Term where
+</span><span class="boring"> | const : String → Term
+</span><span class="boring"> | app   : String → List Term → Term
+</span><span class="boring">namespace Term
+</span><span class="boring">mutual
+</span><span class="boring"> def numConsts : Term → Nat
+</span><span class="boring">   | const _ =&gt; 1
+</span><span class="boring">   | app _ cs =&gt; numConstsLst cs
+</span><span class="boring">  def numConstsLst : List Term → Nat
+</span><span class="boring">   | [] =&gt; 0
+</span><span class="boring">   | c :: cs =&gt; numConsts c + numConstsLst cs
+</span><span class="boring">end
+</span>mutual
+  def replaceConst (a b : String) : Term → Term
+    | const c =&gt; if a == c then const b else const c
+    | app f cs =&gt; app f (replaceConstLst a b cs)
+
+  def replaceConstLst (a b : String) : List Term → List Term
+    | [] =&gt; []
+    | c :: cs =&gt; replaceConst a b c :: replaceConstLst a b cs
+end
+
+mutual
+  theorem numConsts_replaceConst (a b : String) (e : Term)
+            : numConsts (replaceConst a b e) = numConsts e := by
+    match e with
+    | const c =&gt; simp [replaceConst]; split &lt;;&gt; simp [numConsts]
+    | app f cs =&gt; simp [replaceConst, numConsts, numConsts_replaceConstLst a b cs]
+
+  theorem numConsts_replaceConstLst (a b : String) (es : List Term)
+            : numConstsLst (replaceConstLst a b es) = numConstsLst es := by
+    match es with
+    | [] =&gt; simp [replaceConstLst, numConstsLst]
+    | c :: cs =&gt;
+      simp [replaceConstLst, numConstsLst, numConsts_replaceConst a b c,
+            numConsts_replaceConstLst a b cs]
+end
+</code></pre>
+<h2><a class="header" href="#dependent-pattern-matching" id="dependent-pattern-matching">Dependent Pattern Matching</a></h2>
 <p>All the examples of pattern matching we considered in
-:numref:<code>pattern_matching</code> can easily be written using <code>cases_on</code>
+<a href="#pattern-matching">Section Pattern Matching</a> can easily be written using <code>cases_on</code>
 and <code>rec_on</code>. However, this is often not the case with indexed
-inductive families such as <code>vector α n</code>, since case splits impose
+inductive families such as <code>Vector α n</code>, since case splits impose
 constraints on the values of the indices. Without the equation
 compiler, we would need a lot of boilerplate code to define very
 simple functions such as <code>map</code>, <code>zip</code>, and <code>unzip</code> using
 recursors. To understand the difficulty, consider what it would take
 to define a function <code>tail</code> which takes a vector
-<code>v : vector α (succ n)</code> and deletes the first element. A first thought might be to
+<code>v : Vector α (succ n)</code> and deletes the first element. A first thought might be to
 use the <code>casesOn</code> function:</p>
 <pre><code class="language-lean">inductive Vector (α : Type u) : Nat → Type u
   | nil  : Vector α 0
@@ -1029,7 +1128,7 @@ families are far from straightforward. For example:</p>
 <p>The <code>map</code> function is even more tedious to define by hand than the
 <code>tail</code> function. We encourage you to try it, using <code>recOn</code>,
 <code>casesOn</code> and <code>noConfusion</code>.</p>
-<h2><a class="header" href="#a-name_inaccessible_patternsainaccessible-patterns" id="a-name_inaccessible_patternsainaccessible-patterns"><a name="_inaccessible_patterns"></a>Inaccessible Patterns</a></h2>
+<h2><a class="header" href="#inaccessible-patterns" id="inaccessible-patterns">Inaccessible Patterns</a></h2>
 <p>Sometimes an argument in a dependent matching pattern is not essential
 to the definition, but nonetheless has to be included to specialize
 the type of the expression appropriately. Lean allows users to mark
@@ -1067,7 +1166,7 @@ def inverse' {f : α → β} : (b : β) → ImageOf f b → α
 <code>f</code> is <em>not</em> a pattern matching variable.</p>
 <p>Inaccessible patterns can be used to clarify and control definitions that
 make use of dependent pattern matching. Consider the following
-definition of the function <code>Vector.add,</code> which adds two vectors of
+definition of the function <code>Vector.add</code>, which adds two vectors of
 elements of a type, assuming that type has an associated addition
 function:</p>
 <pre><code class="language-lean">inductive Vector (α : Type u) : Nat → Type u
@@ -1098,11 +1197,9 @@ the equation compiler to avoid the case split on <code>n</code></p>
 </span><span class="boring">  | nil  : Vector α 0
 </span><span class="boring">  | cons : α → {n : Nat} → Vector α n → Vector α (n+1)
 </span><span class="boring">namespace Vector
-</span>
-def add [Add α] : {n : Nat} → Vector α n → Vector α n → Vector α n
-  | .(_),   nil,       nil       =&gt; nil
+</span>def add [Add α] : {n : Nat} → Vector α n → Vector α n → Vector α n
+  | .(_), nil,       nil       =&gt; nil
   | .(_), cons a as, cons b bs =&gt; cons (a + b) (add as bs)
-
 <span class="boring">end Vector
 </span></code></pre>
 <p>Marking the position as an inaccessible pattern tells the
@@ -1115,11 +1212,9 @@ matching.</p>
 </span><span class="boring">  | nil  : Vector α 0
 </span><span class="boring">  | cons : α → {n : Nat} → Vector α n → Vector α (n+1)
 </span><span class="boring">namespace Vector
-</span>
-def add [Add α] : {n : Nat} → Vector α n → Vector α n → Vector α n
-  | _,   nil,       nil       =&gt; nil
+</span>def add [Add α] : {n : Nat} → Vector α n → Vector α n → Vector α n
+  | _, nil,       nil       =&gt; nil
   | _, cons a as, cons b bs =&gt; cons (a + b) (add as bs)
-
 <span class="boring">end Vector
 </span></code></pre>
 <p>As we mentioned above, the argument <code>{n : Nat}</code> is part of the
@@ -1132,11 +1227,9 @@ these extra discriminants automatically for us.</p>
 </span><span class="boring">  | nil  : Vector α 0
 </span><span class="boring">  | cons : α → {n : Nat} → Vector α n → Vector α (n+1)
 </span><span class="boring">namespace Vector
-</span>
-def add [Add α] {n : Nat} : Vector α n → Vector α n → Vector α n
+</span>def add [Add α] {n : Nat} : Vector α n → Vector α n → Vector α n
   | nil,       nil       =&gt; nil
   | cons a as, cons b bs =&gt; cons (a + b) (add as bs)
-
 <span class="boring">end Vector
 </span></code></pre>
 <p>When combined with the <em>auto bound implicits</em> feature, you can simplify
@@ -1145,11 +1238,9 @@ the declare further and write:</p>
 </span><span class="boring">  | nil  : Vector α 0
 </span><span class="boring">  | cons : α → {n : Nat} → Vector α n → Vector α (n+1)
 </span><span class="boring">namespace Vector
-</span>
-def add [Add α] : Vector α n → Vector α n → Vector α n
+</span>def add [Add α] : Vector α n → Vector α n → Vector α n
   | nil,       nil       =&gt; nil
   | cons a as, cons b bs =&gt; cons (a + b) (add as bs)
-
 <span class="boring">end Vector
 </span></code></pre>
 <p>Using these new features, you can write the other vector functions defined
@@ -1176,7 +1267,7 @@ def zip : Vector α n → Vector β n → Vector (α × β) n
   | cons a as, cons b bs =&gt; cons (a, b) (zip as bs)
 <span class="boring">end Vector
 </span></code></pre>
-<h2><a class="header" href="#a-name_match_expressionsamatch-expressions" id="a-name_match_expressionsamatch-expressions"><a name="_match_expressions"></a>Match Expressions</a></h2>
+<h2><a class="header" href="#match-expressions" id="match-expressions">Match Expressions</a></h2>
 <p>Lean also provides a compiler for <em>match-with</em> expressions found in
 many functional languages.</p>
 <pre><code class="language-lean">def isNotZero (m : Nat) : Bool :=
@@ -1232,13 +1323,12 @@ def bar₄ (p : Nat × Nat) : Nat :=
 <pre><code class="language-lean">variable (p q : Nat → Prop)
 
 example : (∃ x, p x) → (∃ y, q y) → ∃ x y, p x ∧ q y
- | ⟨x, px⟩, ⟨y, qy⟩ =&gt; ⟨x, y, px, qy⟩
+  | ⟨x, px⟩, ⟨y, qy⟩ =&gt; ⟨x, y, px, qy⟩
 
 example (h₀ : ∃ x, p x) (h₁ : ∃ y, q y)
         : ∃ x y, p x ∧ q y :=
   match h₀, h₁ with
   | ⟨x, px⟩, ⟨y, qy⟩ =&gt; ⟨x, y, px, qy⟩
-
 
 example : (∃ x, p x) → (∃ y, q y) → ∃ x y, p x ∧ q y :=
   fun ⟨x, px⟩ ⟨y, qy⟩ =&gt; ⟨x, y, px, qy⟩
@@ -1249,7 +1339,7 @@ example (h₀ : ∃ x, p x) (h₁ : ∃ y, q y)
   let ⟨y, qy⟩ := h₁
   ⟨x, y, px, qy⟩
 </code></pre>
-<h2><a class="header" href="#local-recursive-declarations" id="local-recursive-declarations">Local recursive declarations</a></h2>
+<h2><a class="header" href="#local-recursive-declarations-1" id="local-recursive-declarations-1">Local Recursive Declarations</a></h2>
 <p>You can define local recursive declarations using the <code>let rec</code> keyword.</p>
 <pre><code class="language-lean">def replicate (n : Nat) (a : α) : List α :=
   let rec loop : Nat → List α → List α
@@ -1279,7 +1369,7 @@ at <code>let rec loop</code>.</p>
     | n+1 =&gt; simp [replicate.loop, aux n, Nat.add_succ, Nat.succ_add]
   exact aux n []
 </code></pre>
-<p>You can also introduce auxiliary recursive declarations using <code>where</code> clause after your definition.
+<p>You can also introduce auxiliary recursive declarations using a <code>where</code> clause after your definition.
 Lean converts them into a <code>let rec</code>.</p>
 <pre><code class="language-lean">def replicate (n : Nat) (a : α) : List α :=
   loop n []
@@ -1317,7 +1407,7 @@ the natural numbers. Similarly, see if you can figure out how to
 define <code>WellFounded.fix</code> on your own.</p>
 </li>
 <li>
-<p>Following the examples in <a href="#dependent_pattern_matching">Section Dependent Pattern Matching</a>,
+<p>Following the examples in <a href="#dependent-pattern-matching">Section Dependent Pattern Matching</a>,
 define a function that will append two vectors.
 This is tricky; you will have to define an auxiliary function.</p>
 </li>
@@ -1444,6 +1534,9 @@ theorem fuse_eq (v : Nat → Nat)
         
         <script type="text/javascript">
             window.playground_copyable = true;
+            window.clip_buttons = true;
+            window.tryit_buttons = false;
+            window.side_bar = true;
         </script>
         
 

@@ -1,5 +1,15 @@
 "use strict";
 
+// set the following window properties to modify the default behavior
+// window.clip_buttons = true       - get copy to clipboard buttons
+// window.tryit_buttons = true      - get try-it buttons that call docView.postMessage.
+// window.default_theme = "dark"    - to override user choice on themes (for hosting inside something like vscode that has it's own themes)
+// window.side_bar = true           - add the side bar.
+
+var docView = null;
+if (typeof acquireVsCodeApi !== 'undefined')
+    docView = acquireVsCodeApi();
+
 // Fix back button cache problem
 window.onunload = function () { };
 
@@ -15,14 +25,7 @@ function playground_text(playground) {
     }
 }
 
-(function codeSnippets() {
-    function fetch_with_timeout(url, options, timeout = 6000) {
-        return Promise.race([
-            fetch(url, options),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), timeout))
-        ]);
-    }
-
+function setupPlaygrounds() {
     var playgrounds = Array.from(document.querySelectorAll(".playground"));
     if (playgrounds.length > 0) {
         fetch_with_timeout("https://play.rust-lang.org/meta/crates", {
@@ -38,6 +41,13 @@ function playground_text(playground) {
             let playground_crates = response.crates.map(item => item["id"]);
             playgrounds.forEach(block => handle_crate_list_update(block, playground_crates));
         });
+    }
+
+    function fetch_with_timeout(url, options, timeout = 6000) {
+        return Promise.race([
+            fetch(url, options),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), timeout))
+        ]);
     }
 
     function handle_crate_list_update(playground_block, playground_crates) {
@@ -136,6 +146,11 @@ function playground_text(playground) {
         .then(response => result_block.innerText = response.result)
         .catch(error => result_block.innerText = "Playground Communication: " + error.message);
     }
+}
+
+function setupSyntaxHighlighting() {
+
+    if (typeof hljs === 'undefined') return;
 
     // Syntax highlighting Configuration
     hljs.configure({
@@ -199,7 +214,9 @@ function playground_text(playground) {
             }
         });
     });
+}
 
+function setupCodeSnippets() {
     if (window.playground_copyable) {
         Array.from(document.querySelectorAll('pre code')).forEach(function (block) {
             var pre_block = block.parentNode;
@@ -211,13 +228,22 @@ function playground_text(playground) {
                     pre_block.insertBefore(buttons, pre_block.firstChild);
                 }
 
-                var clipButton = document.createElement('button');
-                clipButton.className = 'fa fa-copy clip-button';
-                clipButton.title = 'Copy to clipboard';
-                clipButton.setAttribute('aria-label', clipButton.title);
-                clipButton.innerHTML = '<i class=\"tooltiptext\"></i>';
-
-                buttons.insertBefore(clipButton, buttons.firstChild);
+                if (window.clip_buttons) {
+                    var clipButton = document.createElement('button');
+                    clipButton.className = 'fa fa-copy clip-button';
+                    clipButton.title = 'Copy to clipboard';
+                    clipButton.setAttribute('aria-label', clipButton.title);
+                    clipButton.innerHTML = '<i class=\"tooltiptext\"></i>';
+                    buttons.insertBefore(clipButton, buttons.firstChild);
+                }
+                if (window.tryit_buttons){
+                    var tryItButton = document.createElement('button');
+                    tryItButton.className = 'fa fa-copy tryit-button';
+                    tryItButton.innerHTML = '<i class="tooltiptext"></i>';
+                    tryItButton.title = 'Try it';
+                    tryItButton.setAttribute('aria-label', tryItButton.title);
+                    buttons.insertBefore(tryItButton, buttons.firstChild);
+                }
             }
         });
     }
@@ -244,13 +270,23 @@ function playground_text(playground) {
         });
 
         if (window.playground_copyable) {
-            var copyCodeClipboardButton = document.createElement('button');
-            copyCodeClipboardButton.className = 'fa fa-copy clip-button';
-            copyCodeClipboardButton.innerHTML = '<i class="tooltiptext"></i>';
-            copyCodeClipboardButton.title = 'Copy to clipboard';
-            copyCodeClipboardButton.setAttribute('aria-label', copyCodeClipboardButton.title);
+            if (window.clip_buttons) {
+                var copyCodeClipboardButton = document.createElement('button');
+                copyCodeClipboardButton.className = 'fa fa-copy clip-button';
+                copyCodeClipboardButton.innerHTML = '<i class="tooltiptext"></i>';
+                copyCodeClipboardButton.title = 'Copy to clipboard';
+                copyCodeClipboardButton.setAttribute('aria-label', copyCodeClipboardButton.title);
+                buttons.insertBefore(copyCodeClipboardButton, buttons.firstChild);
+            }
 
-            buttons.insertBefore(copyCodeClipboardButton, buttons.firstChild);
+            if (window.tryit_buttons){
+                var tryItButton = document.createElement('button');
+                tryItButton.className = 'fa fa-copy tryit-button';
+                tryItButton.innerHTML = '<i class="tooltiptext"></i>';
+                tryItButton.title = 'Try it';
+                tryItButton.setAttribute('aria-label', tryItButton.title);
+                buttons.insertBefore(tryItButton, buttons.firstChild);
+            }
         }
 
         let code_block = pre_block.querySelector("code");
@@ -269,18 +305,68 @@ function playground_text(playground) {
             });
         }
     });
-})();
+}
 
-(function themes() {
-    var html = document.querySelector('html');
-    var themeToggleButton = document.getElementById('theme-toggle');
-    var themePopup = document.getElementById('theme-list');
-    var themeColorMetaTag = document.querySelector('meta[name="theme-color"]');
+function get_theme() {
+    var theme;
+    try { theme = localStorage.getItem('mdbook-theme'); } catch (e) { }
+    if (theme === null || theme === undefined) {
+        return default_theme;
+    } else {
+        return theme;
+    }
+}
+
+function set_theme(theme, store = true) {
+    let ace_theme;
+
     var stylesheets = {
         ayuHighlight: document.querySelector("[href$='ayu-highlight.css']"),
         tomorrowNight: document.querySelector("[href$='tomorrow-night.css']"),
         highlight: document.querySelector("[href$='highlight.css']"),
     };
+    if (theme == 'coal' || theme == 'navy') {
+        stylesheets.ayuHighlight.disabled = true;
+        stylesheets.tomorrowNight.disabled = false;
+        stylesheets.highlight.disabled = true;
+        ace_theme = "ace/theme/tomorrow_night";
+    } else if (theme == 'ayu') {
+        stylesheets.ayuHighlight.disabled = false;
+        stylesheets.tomorrowNight.disabled = true;
+        stylesheets.highlight.disabled = true;
+        ace_theme = "ace/theme/tomorrow_night";
+    } else {
+        stylesheets.ayuHighlight.disabled = true;
+        stylesheets.tomorrowNight.disabled = true;
+        stylesheets.highlight.disabled = false;
+        ace_theme = "ace/theme/dawn";
+    }
+
+    setTimeout(function () {
+        var themeColorMetaTag = document.querySelector('meta[name="theme-color"]');
+        themeColorMetaTag.content = getComputedStyle(document.body).backgroundColor;
+    }, 1);
+
+    if (window.ace && window.editors) {
+        window.editors.forEach(function (editor) {
+            editor.setTheme(ace_theme);
+        });
+    }
+
+    var previousTheme = get_theme();
+
+    if (store) {
+        try { localStorage.setItem('mdbook-theme', theme); } catch (e) { }
+    }
+
+    if (previousTheme) html.classList.remove(previousTheme);
+    if (theme) html.classList.add(theme);
+}
+
+function setupThemes() {
+    var html = document.querySelector('html');
+    var themeToggleButton = document.getElementById('theme-toggle');
+    var themePopup = document.getElementById('theme-list');
 
     function showThemes() {
         themePopup.style.display = 'block';
@@ -294,61 +380,13 @@ function playground_text(playground) {
         themeToggleButton.focus();
     }
 
-    function get_theme() {
-        var theme;
-        try { theme = localStorage.getItem('mdbook-theme'); } catch (e) { }
-        if (theme === null || theme === undefined) {
-            return default_theme;
-        } else {
-            return theme;
-        }
-    }
-
-    function set_theme(theme, store = true) {
-        let ace_theme;
-
-        if (theme == 'coal' || theme == 'navy') {
-            stylesheets.ayuHighlight.disabled = true;
-            stylesheets.tomorrowNight.disabled = false;
-            stylesheets.highlight.disabled = true;
-
-            ace_theme = "ace/theme/tomorrow_night";
-        } else if (theme == 'ayu') {
-            stylesheets.ayuHighlight.disabled = false;
-            stylesheets.tomorrowNight.disabled = true;
-            stylesheets.highlight.disabled = true;
-            ace_theme = "ace/theme/tomorrow_night";
-        } else {
-            stylesheets.ayuHighlight.disabled = true;
-            stylesheets.tomorrowNight.disabled = true;
-            stylesheets.highlight.disabled = false;
-            ace_theme = "ace/theme/dawn";
-        }
-
-        setTimeout(function () {
-            themeColorMetaTag.content = getComputedStyle(document.body).backgroundColor;
-        }, 1);
-
-        if (window.ace && window.editors) {
-            window.editors.forEach(function (editor) {
-                editor.setTheme(ace_theme);
-            });
-        }
-
-        var previousTheme = get_theme();
-
-        if (store) {
-            try { localStorage.setItem('mdbook-theme', theme); } catch (e) { }
-        }
-
-        html.classList.remove(previousTheme);
-        html.classList.add(theme);
-    }
-
     // Set theme
     var theme = get_theme();
-
-    set_theme(theme, false);
+    if (typeof window.default_theme !== 'undefined') {
+        set_theme(window.default_theme, false);
+    } else {
+        set_theme(theme, false);
+    }
 
     themeToggleButton.addEventListener('click', function () {
         if (themePopup.style.display === 'block') {
@@ -410,9 +448,9 @@ function playground_text(playground) {
                 break;
         }
     });
-})();
+};
 
-(function sidebar() {
+function setupSidebar() {
     var html = document.querySelector("html");
     var sidebar = document.getElementById("sidebar");
     var sidebarLinks = document.querySelectorAll('#sidebar a');
@@ -530,9 +568,9 @@ function playground_text(playground) {
         // https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollIntoView
         activeSection.scrollIntoView({ block: 'center' });
     }
-})();
+}
 
-(function chapterNavigation() {
+function setupChapterNavigation() {
     document.addEventListener('keydown', function (e) {
         if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) { return; }
         if (window.search && window.search.hasFocus()) { return; }
@@ -554,9 +592,9 @@ function playground_text(playground) {
                 break;
         }
     });
-})();
+};
 
-(function clipboard() {
+function setupClipboardButtons() {
     var clipButtons = document.querySelectorAll('.clip-button');
 
     function hideTooltip(elem) {
@@ -591,7 +629,34 @@ function playground_text(playground) {
     clipboardSnippets.on('error', function (e) {
         showTooltip(e.trigger, "Clipboard error!");
     });
-})();
+}
+
+function setupTryItButtons() {
+    if (!docView) return;
+
+    var clipButtons = document.querySelectorAll('.tryit-button');
+
+    function hideTooltip(elem) {
+        elem.firstChild.innerText = "";
+        elem.className = 'fa fa-copy tryit-button';
+    }
+
+    Array.from(clipButtons).forEach(function (clipButton) {
+        clipButton.addEventListener('mouseout', function (e) {
+            hideTooltip(e.currentTarget);
+        });
+        clipButton.addEventListener('click', function (e) {
+            console.log('clicked tryit button')
+            e.preventDefault();
+            const name = 'tryit';
+            const playground = clipButton.parentElement.parentElement;
+            const code_block = playground.querySelector('code');
+            const contents = code_block?.textContent;
+            docView.postMessage({name, contents});
+        })
+    });
+
+};
 
 (function scrollToTop () {
     var menuTitle = document.querySelector('.menu-title');
@@ -658,3 +723,34 @@ function playground_text(playground) {
         }, { passive: true });
     })();
 })();
+
+var loaded = false;
+
+setupSyntaxHighlighting();
+setupThemes();
+
+// We lazily setup these things to make it easier to re-host this stuff in a different
+// environment like vscode.
+window.addEventListener('load', () => {
+    setupPlaygrounds();
+    setupCodeSnippets();
+    setupClipboardButtons();
+    setupTryItButtons();
+    setupChapterNavigation();
+    if (window.side_bar){
+        setupSidebar();
+    }
+    loaded = true;
+    document.scrollingElement.scrollTo({ top: 0 });
+});
+
+function receiveMessage(e){
+    const message = e.data;
+    if (message.theme){
+        if (loaded) {
+            set_theme(message.theme, false);
+        }
+    }
+}
+
+window.addEventListener('message', e => receiveMessage(e));

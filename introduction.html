@@ -59,11 +59,11 @@
                 var theme = localStorage.getItem('mdbook-theme');
                 var sidebar = localStorage.getItem('mdbook-sidebar');
 
-                if (theme.startsWith('"') && theme.endsWith('"')) {
+                if (theme && theme.startsWith('"') && theme.endsWith('"')) {
                     localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
                 }
 
-                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                if (sidebar && sidebar.startsWith('"') && sidebar.endsWith('"')) {
                     localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
                 }
             } catch (e) { }
@@ -205,20 +205,14 @@ claims in both domains.</p>
 language. More to the point, it can be viewed as a system for writing programs with a precise semantics, as well as
 reasoning about the functions that the programs compute. Lean also has mechanisms to serve as its own <em>metaprogramming
 language</em>, which means that you can implement automation and extend the functionality of Lean using Lean itself. These
-aspects of Lean are explored in a companion tutorial to this one, <a href="TBD">Programming in Lean 4</a>, though computational
+aspects of Lean are described in the free online book, <a href="https://lean-lang.org/functional_programming_in_lean/">Functional Programming in Lean</a>, though computational
 aspects of the system will make an appearance here.</p>
 <h2><a class="header" href="#about-lean" id="about-lean">About Lean</a></h2>
 <p>The <em>Lean</em> project was launched by Leonardo de Moura at Microsoft Research Redmond in 2013. It is an ongoing, long-term
 effort, and much of the potential for automation will be realized only gradually over time. Lean is released under the
 <a href="LICENSE">Apache 2.0 license</a>, a permissive open source license that permits others to use and extend the code and
 mathematical libraries freely.</p>
-<p>There are currently two ways to use Lean. The first is to run it from the web: a Javascript version of Lean, a standard
-library of definitions and theorems, and an editor are actually downloaded to your browser and run there. This provides
-a quick and convenient way to begin experimenting with the system.</p>
-<p>The second way to use Lean is to install and run it natively on your computer. The native version is much faster than
-the web version, and is more flexible in other ways, too. Special modes in Visual Studio Code (VS Code for short) and
-Emacs offer powerful support for writing and debugging proofs, and is much better suited for serious use. The source
-code, and instructions for building Lean, are available at
+<p>To install Lean in your computer consider using the <a href="https://github.com/leanprover/lean4/blob/master/doc/quickstart.md">Quickstart</a> instructions. The Lean source code, and instructions for building Lean, are available at
 <a href="https://github.com/leanprover/lean4/">https://github.com/leanprover/lean4/</a>.</p>
 <p>This tutorial describes the current version of Lean, known as Lean 4.</p>
 <h2><a class="header" href="#about-this-book" id="about-this-book">About this Book</a></h2>
@@ -242,17 +236,16 @@ with the system, and the mechanisms Lean offers for managing complex theories an
   have hq : q := And.right hpq
   show q ∧ p from And.intro hq hp
 </code></pre>
-<p>If you are reading the book online, you will see a button that reads &quot;try it!&quot; Pressing the button opens up a tab with a
-Lean editor, and copies the example with enough surrounding context to make the code compile correctly. You can type
+<p>If you are reading the book inside of <a href="https://code.visualstudio.com/">VS Code</a>, you will see a button that reads &quot;try it!&quot; Pressing the button copies the example to your editor with enough surrounding context to make the code compile correctly. You can type
 things into the editor and modify the examples, and Lean will check the results and provide feedback continuously as you
 type. We recommend running the examples and experimenting with the code on your own as you work through the chapters
-that follow.</p>
+that follow. You can open this book on VS Code by using the command &quot;Lean 4: Open Documentation View&quot;.</p>
 <h2><a class="header" href="#acknowledgments" id="acknowledgments">Acknowledgments</a></h2>
 <p>This tutorial is an open access project maintained on Github. Many people have contributed to the effort, providing
 corrections, suggestions, examples, and text. We are grateful to Ulrik Buchholz, Kevin Buzzard, Mario Carneiro, Nathan
 Carter, Eduardo Cavazos, Amine Chaieb, Joe Corneli, William DeMeo, Marcus Klaas de Vries, Ben Dyer, Gabriel Ebner,
 Anthony Hart, Simon Hudon, Sean Leather, Assia Mahboubi, Gihan Marasingha, Patrick Massot, Christopher John Mazey,
-Sebastian Ullrich, Floris van Doorn, Daniel Velleman, Théo Zimmerman, Paul Chisholm, and Chris Lovett for their contributions.  Please see <a href="https://github.com/leanprover/">lean prover</a> and <a href="https://github.com/leanprover-community/">lean community</a> for an up to date list
+Sebastian Ullrich, Floris van Doorn, Daniel Velleman, Théo Zimmerman, Paul Chisholm, Chris Lovett, and Siddhartha Gadgil for their contributions.  Please see <a href="https://github.com/leanprover/">lean prover</a> and <a href="https://github.com/leanprover-community/">lean community</a> for an up to date list
 of our amazing contributors.</p>
 
                     </main>
@@ -301,6 +294,9 @@ of our amazing contributors.</p>
         
         <script type="text/javascript">
             window.playground_copyable = true;
+            window.clip_buttons = true;
+            window.tryit_buttons = false;
+            window.side_bar = true;
         </script>
         
 

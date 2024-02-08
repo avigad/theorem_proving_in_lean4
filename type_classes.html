@@ -59,11 +59,11 @@
                 var theme = localStorage.getItem('mdbook-theme');
                 var sidebar = localStorage.getItem('mdbook-sidebar');
 
-                if (theme.startsWith('"') && theme.endsWith('"')) {
+                if (theme && theme.startsWith('"') && theme.endsWith('"')) {
                     localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
                 }
 
-                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                if (sidebar && sidebar.startsWith('"') && sidebar.endsWith('"')) {
                     localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
                 }
             } catch (e) { }
@@ -167,28 +167,28 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#type-classes" id="type-classes">Type classes</a></h1>
+                        <h1><a class="header" href="#type-classes" id="type-classes">Type Classes</a></h1>
 <p>Type classes were introduced as a principled way of enabling
 ad-hoc polymorphism in functional programming languages. We first observe that it
 would be easy to implement an ad-hoc polymorphic function (such as addition) if the
 function simply took the type-specific implementation of addition as an argument
 and then called that implementation on the remaining arguments. For example,
-suppose we declare a structure in Lean to hold implementations of addition</p>
+suppose we declare a structure in Lean to hold implementations of addition.</p>
 <pre><code class="language-lean"><span class="boring">namespace Ex
 </span>structure Add (a : Type) where
-  add : a -&gt; a -&gt; a
+  add : a → a → a
 
 #check @Add.add
 -- Add.add : {a : Type} → Add a → a → a → a
 <span class="boring">end Ex
 </span></code></pre>
 <p>In the above Lean code, the field <code>add</code> has type
-<code>Add.add : {α : Type} → Add α → α → α → α</code>
+<code>Add.add : {a : Type} → Add a → a → a → a</code>
 where the curly braces around the type <code>a</code> mean that it is an implicit argument.
-We could implement <code>double</code> by</p>
+We could implement <code>double</code> by:</p>
 <pre><code class="language-lean"><span class="boring">namespace Ex
 </span><span class="boring">structure Add (a : Type) where
-</span><span class="boring"> add : a -&gt; a -&gt; a
+</span><span class="boring"> add : a → a → a
 </span>def double (s : Add a) (x : a) : a :=
   s.add x x
 
@@ -200,7 +200,6 @@ We could implement <code>double</code> by</p>
 
 #eval double { add := Int.add } 10
 -- 20
-
 <span class="boring">end Ex
 </span></code></pre>
 <p>Note that you can double a natural number <code>n</code> by <code>double { add := Nat.add } n</code>.
@@ -211,10 +210,10 @@ polymorphism.</p>
 <p>The main idea behind type classes is to make arguments such as <code>Add a</code> implicit,
 and to use a database of user-defined instances to synthesize the desired instances
 automatically through a process known as typeclass resolution. In Lean, by changing
-<code>structure</code> to <code>class</code> in the example above, the type of <code>Add.add</code> becomes</p>
+<code>structure</code> to <code>class</code> in the example above, the type of <code>Add.add</code> becomes:</p>
 <pre><code class="language-lean"><span class="boring">namespace Ex
 </span>class Add (a : Type) where
-  add : a -&gt; a -&gt; a
+  add : a → a → a
 
 #check @Add.add
 -- Add.add : {a : Type} → [self : Add a] → a → a → a
@@ -223,22 +222,57 @@ automatically through a process known as typeclass resolution. In Lean, by chang
 <p>where the square brackets indicate that the argument of type <code>Add a</code> is <em>instance implicit</em>,
 i.e. that it should be synthesized using typeclass resolution. This version of
 <code>add</code> is the Lean analogue of the Haskell term <code>add :: Add a =&gt; a -&gt; a -&gt; a</code>.
-Similarly, we can register an instance by</p>
+Similarly, we can register instances by:</p>
 <pre><code class="language-lean"><span class="boring">namespace Ex
 </span><span class="boring">class Add (a : Type) where
-</span><span class="boring"> add : a -&gt; a -&gt; a
+</span><span class="boring"> add : a → a → a
 </span>instance : Add Nat where
   add := Nat.add
 
+instance : Add Int where
+  add := Int.add
+
+instance : Add Float where
+  add := Float.add
 <span class="boring">end Ex
 </span></code></pre>
-<p>Then for <code>n : Nat</code> and <code>m : Nat</code>, the term <code>Add.add n m</code> triggers typeclass resolution with the goal
-of <code>Add Nat</code>, and typeclass resolution will synthesize the instance above. In
-general, instances may depend on other instances in complicated ways. For example,
+<p>Then for <code>n : Nat</code> and <code>m : Nat</code>, the term <code>Add.add n m</code> triggers typeclass resolution with
+the goal of <code>Add Nat</code>, and typeclass resolution will synthesize the instance for <code>Nat</code> above.
+We can now reimplement <code>double</code> using an instance implicit by:</p>
+<pre><code class="language-lean"><span class="boring">namespace Ex
+</span><span class="boring">class Add (a : Type) where
+</span><span class="boring">  add : a → a → a
+</span><span class="boring">instance : Add Nat where
+</span><span class="boring"> add := Nat.add
+</span><span class="boring">instance : Add Int where
+</span><span class="boring"> add := Int.add
+</span><span class="boring">instance : Add Float where
+</span><span class="boring"> add := Float.add
+</span>def double [Add a] (x : a) : a :=
+  Add.add x x
+
+#check @double
+-- @double : {a : Type} → [inst : Add a] → a → a
+
+#eval double 10
+-- 20
+
+#eval double (10 : Int)
+-- 100
+
+#eval double (7 : Float)
+-- 14.000000
+
+#eval double (239.0 + 2)
+-- 482.000000
+
+<span class="boring">end Ex
+</span></code></pre>
+<p>In general, instances may depend on other instances in complicated ways. For example,
 you can declare an (anonymous) instance stating that if <code>a</code> has addition, then <code>Array a</code>
 has addition:</p>
 <pre><code class="language-lean">instance [Add a] : Add (Array a) where
-  add x y := Array.zipWith x y (. + .)
+  add x y := Array.zipWith x y (· + ·)
 
 #eval Add.add #[1, 2] #[3, 4]
 -- #[4, 6]
@@ -246,7 +280,7 @@ has addition:</p>
 #eval #[1, 2] + #[3, 4]
 -- #[4, 6]
 </code></pre>
-<p>Note that <code>x + y</code> is notation for <code>Add.add x y</code> in Lean.</p>
+<p>Note that <code>(· + ·)</code> is notation for <code>fun x y =&gt; x + y</code> in Lean.</p>
 <p>The example above demonstrates how type classes are used to overload notation.
 Now, we explore another application. We often need an arbitrary element of a given type.
 Recall that types may not have any elements in Lean.
@@ -255,7 +289,7 @@ For example, we may like the expression <code>head xs</code> to be of type <code
 Similarly, many theorems hold under the additional assumption that a type is not empty.
 For example, if <code>a</code> is a type, <code>exists x : a, x = x</code> is true only if <code>a</code> is not empty.
 The standard library defines a type class <code>Inhabited</code> to enable type class inference to infer a
-&quot;default&quot; or &quot;arbitrary&quot; element of an inhabited type.
+&quot;default&quot; element of an inhabited type.
 Let us start with the first step of the program above, declaring an appropriate class:</p>
 <pre><code class="language-lean"><span class="boring">namespace Ex
 </span>class Inhabited (a : Type u) where
@@ -265,7 +299,7 @@ Let us start with the first step of the program above, declaring an appropriate 
 -- Inhabited.default : {a : Type u} → [self : Inhabited a] → a
 <span class="boring">end Ex
 </span></code></pre>
-<p>Note <code>Inhabited.default</code> doesn't have any explicit argument.</p>
+<p>Note <code>Inhabited.default</code> doesn't have any explicit arguments.</p>
 <p>An element of the class <code>Inhabited a</code> is simply an expression of the form <code>Inhabited.mk x</code>, for some element <code>x : a</code>.
 The projection <code>Inhabited.default</code> will allow us to &quot;extract&quot; such an element of <code>a</code> from an element of <code>Inhabited a</code>.
 Now we populate the class with some instances:</p>
@@ -312,30 +346,6 @@ instance : Inhabited Prop where
 -- true
 <span class="boring">end Ex
 </span></code></pre>
-<p>Sometimes we want to think of the default element of a type as being an <em>arbitrary</em> element, whose specific value should not play a role in our proofs.
-For that purpose, we can write <code>arbitrary</code> instead of <code>default</code>. We define <code>arbitrary</code> as an <em>opaque</em> constant.
-Opaque constants are never unfolded by the type checker.</p>
-<pre><code class="language-lean"><span class="boring">namespace Ex
-</span><span class="boring">export Inhabited (default)
-</span>theorem defNatEq0 : (default : Nat) = 0 :=
-  rfl
-
-constant arbitrary [Inhabited a] : a :=
-  Inhabited.default
-
--- theorem arbitraryNatEq0 : (arbitrary : Nat) = 0 :=
---   rfl
-/-
-error: type mismatch
-  rfl
-has type
-  arbitrary = arbitrary
-but is expected to have type
-  arbitrary = 0
--/
-<span class="boring">end Ex
-</span></code></pre>
-<p>The theorem <code>defNatEq0</code> type checks because the type checker can unfold <code>(default : Nat)</code> and reduce it to <code>0</code>. This is not the case in the theorem <code>arbitraryNatEq0</code> because <code>arbitrary</code> is an opaque constant.</p>
 <h2><a class="header" href="#chaining-instances" id="chaining-instances">Chaining Instances</a></h2>
 <p>If that were the extent of type class inference, it would not be all that impressive;
 it would be simply a mechanism of storing a list of instances for the elaborator to find in a lookup table.
@@ -344,7 +354,7 @@ an instance declaration can in turn depend on an implicit instance of a type cla
 This causes class inference to chain through instances recursively, backtracking when necessary, in a Prolog-like search.</p>
 <p>For example, the following definition shows that if two types <code>a</code> and <code>b</code> are inhabited, then so is their product:</p>
 <pre><code class="language-lean">instance [Inhabited a] [Inhabited b] : Inhabited (a × b) where
-  default := (arbitrary, arbitrary)
+  default := (default, default)
 </code></pre>
 <p>With this added to the earlier instance declarations, type class instance can infer, for example, a default element of <code>Nat × Bool</code>:</p>
 <pre><code class="language-lean"><span class="boring">namespace Ex
@@ -354,18 +364,18 @@ This causes class inference to chain through instances recursively, backtracking
 </span><span class="boring"> default := true
 </span><span class="boring">instance : Inhabited Nat where
 </span><span class="boring"> default := 0
-</span><span class="boring">constant arbitrary [Inhabited a] : a :=
+</span><span class="boring">opaque default [Inhabited a] : a :=
 </span><span class="boring"> Inhabited.default
 </span>instance [Inhabited a] [Inhabited b] : Inhabited (a × b) where
-  default := (arbitrary, arbitrary)
+  default := (default, default)
 
-#eval (arbitrary : Nat × Bool)
+#eval (default : Nat × Bool)
 -- (0, true)
 <span class="boring">end Ex
 </span></code></pre>
 <p>Similarly, we can inhabit type function with suitable constant functions:</p>
-<pre><code class="language-lean">instance [Inhabited b] : Inhabited (a -&gt; b) where
-  default := fun _ =&gt; arbitrary
+<pre><code class="language-lean">instance [Inhabited b] : Inhabited (a → b) where
+  default := fun _ =&gt; default
 </code></pre>
 <p>As an exercise, try defining default instances for other types, such as <code>List</code> and <code>Sum</code> types.</p>
 <p>The Lean standard library contains the definition <code>inferInstance</code>. It has type <code>{α : Sort u} → [i : α] → α</code>,
@@ -375,7 +385,7 @@ and is useful for triggering the type class resolution procedure when the expect
 def foo : Inhabited (Nat × Nat) :=
   inferInstance
 
-theorem ex : foo.default = (arbitrary, arbitrary) :=
+theorem ex : foo.default = (default, default) :=
   rfl
 </code></pre>
 <p>You can use the command <code>#print</code> to inspect how simple <code>inferInstance</code> is.</p>
@@ -434,10 +444,10 @@ instance [s : Monoid α] : OfNat α (nat_lit 1) where
 def getUnit [Monoid α] : α :=
   1
 </code></pre>
-<h2><a class="header" href="#output-parameters" id="output-parameters">Output parameters</a></h2>
+<h2><a class="header" href="#output-parameters" id="output-parameters">Output Parameters</a></h2>
 <p>By default, Lean only tries to synthesize an instance <code>Inhabited T</code> when the term <code>T</code> is known and does not
 contain missing parts. The following command produces the error
-&quot;failed to create type class instance for <code>Inhabited (Nat × ?m.1499)</code>&quot; because the type has a missing part (i.e., the <code>_</code>).</p>
+&quot;typeclass instance problem is stuck, it is often due to metavariables <code>?m.7</code>&quot; because the type has a missing part (i.e., the <code>_</code>).</p>
 <pre><code class="language-lean">#check_failure (inferInstance : Inhabited (Nat × _))
 </code></pre>
 <p>You can view the parameter of the type class <code>Inhabited</code> as an <em>input</em> value for the type class synthesizer.
@@ -462,7 +472,7 @@ instance : HMul Nat (Array Nat) (Array Nat) where
 <span class="boring">end Ex
 </span></code></pre>
 <p>The parameters <code>α</code> and <code>β</code> are considered input parameters and <code>γ</code> an output one.
-Given an application <code>hMul a b</code>, after types of <code>a</code> and <code>b</code> are known, the type class
+Given an application <code>hMul a b</code>, after the types of <code>a</code> and <code>b</code> are known, the type class
 synthesizer is invoked, and the resulting type is obtained from the output parameter <code>γ</code>.
 In the example above, we defined two instances. The first one is the homogeneous
 multiplication for natural numbers. The second is the scalar multiplication for arrays.
@@ -491,7 +501,7 @@ instance [HMul α β γ] : HMul α (Array β) (Array γ) where
 <p>You can use our new scalar array multiplication instance on arrays of type <code>Array β</code>
 with a scalar of type <code>α</code> whenever you have an instance <code>HMul α β γ</code>.
 In the last <code>#eval</code>, note that the instance was used twice on an array of arrays.</p>
-<h2><a class="header" href="#default-instances" id="default-instances">Default instances</a></h2>
+<h2><a class="header" href="#default-instances" id="default-instances">Default Instances</a></h2>
 <p>In the class <code>HMul</code>, the parameters <code>α</code> and <code>β</code> are treated as input values.
 Thus, type class synthesis only starts after these two types are known. This may often
 be too restrictive.</p>
@@ -506,7 +516,7 @@ instance : HMul Int Int Int where
 
 def xs : List Int := [1, 2, 3]
 
--- Error &quot;failed to create type class instance for HMul Int ?m.1767 (?m.1797 x)&quot;
+-- Error &quot;typeclass instance problem is stuck, it is often due to metavariables HMul ?m.89 ?m.90 ?m.91&quot;
 #check_failure fun y =&gt; xs.map (fun x =&gt; hMul x y)
 <span class="boring">end Ex
 </span></code></pre>
@@ -519,20 +529,20 @@ this kind of situation. We can achieve exactly that using <em>default instances<
 
 export HMul (hMul)
 
-@[defaultInstance]
+@[default_instance]
 instance : HMul Int Int Int where
   hMul := Int.mul
 
 def xs : List Int := [1, 2, 3]
 
-#check fun y =&gt; xs.map (fun x =&gt; hMul x y)  -- Int -&gt; List Int
+#check fun y =&gt; xs.map (fun x =&gt; hMul x y)  -- Int → List Int
 <span class="boring">end Ex
 </span></code></pre>
-<p>By tagging the instance above with the attribute <code>defaultInstance</code>, we are instructing Lean
+<p>By tagging the instance above with the attribute <code>default_instance</code>, we are instructing Lean
 to use this instance on pending type class synthesis problems.
 The actual Lean implementation defines homogeneous and heterogeneous classes for arithmetical operators.
 Moreover, <code>a+b</code>, <code>a*b</code>, <code>a-b</code>, <code>a/b</code>, and <code>a%b</code> are notations for the heterogeneous versions.
-The instance <code>OfNat Nat n</code> is the default instance for the <code>OfNat</code> class. This is why the numeral
+The instance <code>OfNat Nat n</code> is the default instance (with priority 100) for the <code>OfNat</code> class. This is why the numeral
 <code>2</code> has type <code>Nat</code> when the expected type is not known. You can define default instances with higher
 priority to override the builtin ones.</p>
 <pre><code class="language-lean">structure Rational where
@@ -540,7 +550,7 @@ priority to override the builtin ones.</p>
   den : Nat
   inv : den ≠ 0
 
-@[defaultInstance 1]
+@[default_instance 200]
 instance : OfNat Rational n where
   ofNat := { num := n, den := 1, inv := by decide }
 
@@ -550,7 +560,7 @@ instance : ToString Rational where
 #check 2 -- Rational
 </code></pre>
 <p>Priorities are also useful to control the interaction between different default instances.
-For example, suppose <code>xs</code> has type <code>α</code>, when elaboration <code>xs.map (fun x =&gt; 2 * x)</code>, we want the homogeneous instance for multiplication
+For example, suppose <code>xs</code> has type <code>List α</code>. When elaborating <code>xs.map (fun x =&gt; 2 * x)</code>, we want the homogeneous instance for multiplication
 to have higher priority than the default instance for <code>OfNat</code>. This is particularly important when we have implemented only the instance
 <code>HMul α α α</code>, and did not implement <code>HMul Nat α α</code>.
 Now, we reveal how the notation <code>a*b</code> is defined in Lean.</p>
@@ -558,7 +568,7 @@ Now, we reveal how the notation <code>a*b</code> is defined in Lean.</p>
 </span>class OfNat (α : Type u) (n : Nat) where
   ofNat : α
 
-@[defaultInstance]
+@[default_instance]
 instance (n : Nat) : OfNat Nat n where
   ofNat := n
 
@@ -568,11 +578,11 @@ class HMul (α : Type u) (β : Type v) (γ : outParam (Type w)) where
 class Mul (α : Type u) where
   mul : α → α → α
 
-@[defaultInstance 10]
+@[default_instance 10]
 instance [Mul α] : HMul α α α where
   hMul a b := Mul.mul a b
 
-infixl:70 &quot; * &quot;  =&gt; HMul.hMul
+infixl:70 &quot; * &quot; =&gt; HMul.hMul
 <span class="boring">end Ex
 </span></code></pre>
 <p>The <code>Mul</code> class is convenient for types that only implement the homogeneous multiplication.</p>
@@ -596,7 +606,7 @@ def double (p : Point) :=
 end -- instance `Add Point` is not active anymore
 
 -- def triple (p : Point) :=
---  p + p + p  -- Error: failed to sythesize instance
+--  p + p + p  -- Error: failed to synthesize instance
 </code></pre>
 <p>You can also temporarily disable an instance using the <code>attribute</code> command
 until the current <code>section</code> or <code>namespace</code> is closed, or until the end
@@ -614,7 +624,7 @@ def double (p : Point) :=
 attribute [-instance] addPoint
 
 -- def triple (p : Point) :=
---  p + p + p  -- Error: failed to sythesize instance
+--  p + p + p  -- Error: failed to synthesize instance
 </code></pre>
 <p>We recommend you only use this command to diagnose problems.</p>
 <h2><a class="header" href="#scoped-instances" id="scoped-instances">Scoped Instances</a></h2>
@@ -710,7 +720,7 @@ follows:</p>
 <p>That is, in <code>dite c t e</code>, we can assume <code>hc : c</code> in the &quot;then&quot;
 branch, and <code>hnc : ¬ c</code> in the &quot;else&quot; branch. To make <code>dite</code> more
 convenient to use, Lean allows us to write <code>if h : c then t else e</code>
-instead of <code>dite c (λ h : c, t) (λ h : ¬ c, e)</code>.</p>
+instead of <code>dite c (λ h : c =&gt; t) (λ h : ¬ c =&gt; e)</code>.</p>
 <p>Without classical logic, we cannot prove that every proposition is
 decidable. But we can prove that <em>certain</em> propositions are
 decidable. For example, we can prove the decidability of basic
@@ -722,7 +732,6 @@ connectives:</p>
 
 #check @instDecidableOr
 #check @instDecidableNot
-#check @instDecidableArrow
 </code></pre>
 <p>Thus we can carry out definitions by cases on decidable predicates on
 the natural numbers:</p>
@@ -740,7 +749,7 @@ decidable. You can import the classical axioms and make the generic
 instance of decidability available by opening the <code>Classical</code> namespace.</p>
 <pre><code class="language-lean">open Classical
 </code></pre>
-<p>Thereafter <code>decidable p</code> has an instance for every <code>p</code>.
+<p>Thereafter <code>Decidable p</code> has an instance for every <code>p</code>.
 Thus all theorems in the library
 that rely on decidability assumptions are freely available when you
 want to reason classically. In <a href="./axioms_and_computation.html">Chapter Axioms and Computation</a>,
@@ -757,7 +766,7 @@ instance (priority := low) propDecidable (a : Prop) : Decidable a :=
     | Or.inr h =&gt; ⟨isFalse h⟩
 <span class="boring">end Hidden
 </span></code></pre>
-<p>The guarantees that Lean will favor other instances and fall back on
+<p>This guarantees that Lean will favor other instances and fall back on
 <code>propDecidable</code> only after other attempts to infer decidability have
 failed.</p>
 <p>The <code>Decidable</code> type class also provides a bit of small-scale
@@ -790,7 +799,7 @@ decision procedure for <code>p</code>, and, if it is successful, evaluates to
 either <code>true</code> or <code>false</code>. In particular, if <code>p</code> is a true closed
 expression, <code>decide p</code> will reduce definitionally to the Boolean <code>true</code>.
 On the assumption that <code>decide p = true</code> holds, <code>of_decide_eq_true</code>
-produces a proof of <code>p</code>. The tactic <code>decide</code> puts it all together: to
+produces a proof of <code>p</code>. The tactic <code>decide</code> puts it all together to
 prove a target <code>p</code>. By the previous observations,
 <code>decide</code> will succeed any time the inferred decision procedure
 for <code>c</code> has enough information to evaluate, definitionally, to the <code>isTrue</code> case.</p>
@@ -818,8 +827,7 @@ in a concise manner:</p>
 under a definition. For example, Lean cannot
 find an instance of <code>Inhabited (Set α)</code>. We can declare one
 explicitly:</p>
-<pre><code class="language-lean">
-def Set (α : Type u) := α → Prop
+<pre><code class="language-lean">def Set (α : Type u) := α → Prop
 
 -- fails
 -- example : Inhabited (Set α) :=
@@ -832,7 +840,7 @@ instance : Inhabited (Set α) :=
 expected instance, or, worse, falls into an infinite loop and times
 out. To help debug in these situations, Lean enables you to request a
 trace of the search:</p>
-<pre><code>set_option trace.Meta.synthInstance true
+<pre><code class="language-lean">set_option trace.Meta.synthInstance true
 </code></pre>
 <p>If you are using VS Code, you can read the results by hovering over
 the relevant theorem or definition, or opening the messages window
@@ -841,14 +849,14 @@ independent Lean process on your file, and the output buffer will show
 a trace every time the type class resolution procedure is subsequently
 triggered.</p>
 <p>You can also limit the search using the following options:</p>
-<pre><code>set_option synthInstance.maxHeartbeats 10000
+<pre><code class="language-lean">set_option synthInstance.maxHeartbeats 10000
 set_option synthInstance.maxSize 400
 </code></pre>
 <p>Option <code>synthInstance.maxHeartbeats</code> specifies the maximum amount of
-heartbeats per typeclass resolution problem. A heartbeat is number of
+heartbeats per typeclass resolution problem. A heartbeat is the number of
 (small) memory allocations (in thousands), 0 means there is no limit.
 Option <code>synthInstance.maxSize</code> is the maximum number of instances used
-to construct a solution in the type class instance synthesis procedure</p>
+to construct a solution in the type class instance synthesis procedure.</p>
 <p>Remember also that in both the VS Code and Emacs editor modes, tab
 completion works in <code>set_option</code>, to help you find suitable options.</p>
 <p>As noted above, the type class instances in a given context represent
@@ -859,7 +867,7 @@ which are declared last are tried first. Moreover, if instances are
 declared in other modules, the order in which they are tried depends
 on the order in which namespaces are opened. Instances declared in
 namespaces which are opened later are tried earlier.</p>
-<p>You can change the order that type classes instances are tried by
+<p>You can change the order that type class instances are tried by
 assigning them a <em>priority</em>. When an instance is declared, it is
 assigned a default priority value. You can assign other priorities
 when defining an instance. The following example illustrates how this
@@ -886,335 +894,146 @@ instance (priority := default+2) i3 : Foo where
 example : Foo.a = 3 :=
   rfl
 </code></pre>
-<!--
-TODO: we may change the coercion mechanism
-.. _coercions_using_type_classes:
-
-Coercions using Type Classes
-----------------------------
-
-The most basic type of coercion maps elements of one type to another. For example, a coercion from ``nat`` to ``int`` allows us to view any element ``n : nat`` as an element of ``int``. But some coercions depend on parameters; for example, for any type ``α``, we can view any element ``l : list α`` as an element of ``set α``, namely, the set of elements occurring in the list. The corresponding coercion is defined on the "family" of types ``list α``, parameterized by ``α``.
-
-Lean allows us to declare three kinds of coercions:
-
--  from a family of types to another family of types
--  from a family of types to the class of sorts
--  from a family of types to the class of function types
-
-The first kind of coercion allows us to view any element of a member of the source family as an element of a corresponding member of the target family. The second kind of coercion allows us to view any element of a member of the source family as a type. The third kind of coercion allows us to view any element of the source family as a function. Let us consider each of these in turn.
-
-In Lean, coercions are implemented on top of the type class resolution framework. We define a coercion from ``α`` to ``β`` by declaring an instance of ``has_coe α β``. For example, we can define a coercion from ``bool`` to ``Prop`` as follows:
-
-.. code-block:: lean
-
-    instance bool_to_Prop : has_coe bool Prop :=
-    ⟨λ b, b = tt⟩
-
-This enables us to use boolean terms in if-then-else expressions:
-
-.. code-block:: lean
-
-    instance bool_to_Prop : has_coe bool Prop :=
-    ⟨λ b, b = tt⟩
-    -- BEGIN
-    #reduce if tt then 3 else 5
-    #reduce if ff then 3 else 5
-    -- END
-
-We can define a coercion from ``list α`` to ``set α`` as follows:
-
-.. code-block:: lean
-
-    def list.to_set {α : Type*} : list α → set α
-    | []     := ∅
-    | (h::t) := {h} ∪ list.to_set t
-
-    instance list_to_set_coe (α : Type*) :
-      has_coe (list α) (set α) :=
-    ⟨list.to_set⟩
-
-    def s : set nat  := {1, 2}
-    def l : list nat := [3, 4]
-
-    #check s ∪ l -- set nat
-
-Coercions are only considered if the given and expected types do not contain metavariables at elaboration time. In the following example, when we elaborate the union operator, the type of ``[3, 2]`` is ``list ?m``, and a coercion will not be considered since it contains metavariables.
-
-.. code-block:: lean
-
-    def list.to_set {α : Type*} : list α → set α
-    | []     := ∅
-    | (h::t) := {h} ∪ list.to_set t
-
-    instance list_to_set_coe (α : Type*) :
-      has_coe (list α) (set α) :=
-    ⟨list.to_set⟩
-
-    def s : set nat  := {1, 2}
-
-    -- BEGIN
-    /- The following #check command produces an error. -/
-    -- #check s ∪ [3, 2]
-    -- END
-
-We can work around this issue by using a type ascription.
-
-.. code-block:: lean
-
-    def list.to_set {α : Type*} : list α → set α
-    | []     := ∅
-    | (h::t) := {h} ∪ list.to_set t
-
-    instance list_to_set_coe (α : Type*) :
-      has_coe (list α) (set α) :=
-    ⟨list.to_set⟩
-
-    def s : set nat  := {1, 2}
-
-    -- BEGIN
-    #check s ∪ [(3:nat), 2]
-    -- or
-    #check s ∪ ([3, 2] : list nat)
-    -- END
-
-In the examples above, you may have noticed the symbol ``↑`` produced by the ``#check`` commands. It is the lift operator, ``↑t`` is notation for ``coe t``. We can use this operator to force a coercion to be introduced in a particular place. It is also helpful to make our intent clear, and work around limitations of the coercion resolution system.
-
-.. code-block:: lean
-
-    def list.to_set {α : Type*} : list α → set α
-    | []     := ∅
-    | (h::t) := {h} ∪ list.to_set t
-
-    instance list_to_set_coe (α : Type*) :
-      has_coe (list α) (set α) :=
-    ⟨list.to_set⟩
-
-    def s : set nat  := {1, 2}
-
-    -- BEGIN
-    #check s ∪ ↑[3, 2]
-
-    variables n m : nat
-    variable i : int
-    #check i + ↑n + ↑m
-    #check i + ↑(n + m)
-    #check ↑n + i
-    -- END
-
-In the first two examples, the coercions are not strictly necessary since Lean will insert implicit nat → int coercions. However, ``#check n + i`` would raise an error, because the expected type of ``i`` is nat in order to match the type of n, and no int → nat coercion exists). In the third example, we therefore insert an explicit ``↑`` to coerce ``n`` to ``int``.
-
-The standard library defines a coercion from subtype ``{x : α // p x}`` to ``α`` as follows:
-
-.. code-block:: lean
-
-    namespace hidden
-    -- BEGIN
-    instance coe_subtype {α : Type*} {p : α → Prop} :
-      has_coe {x // p x} α :=
-    ⟨λ s, subtype.val s⟩
-    -- END
-    end hidden
-
-Lean will also chain coercions as necessary. Actually, the type class ``has_coe_t`` is the transitive closure of ``has_coe``. You may have noticed that the type of ``coe`` depends on ``has_lift_t``, the transitive closure of the type class ``has_lift``, instead of ``has_coe_t``. Every instance of ``has_coe_t`` is also an instance of ``has_lift_t``, but the elaborator only introduces automatically instances of ``has_coe_t``. That is, to be able to coerce using an instance of ``has_lift_t``, we must use the operator ``↑``. In the standard library, we have the following instance:
-
-.. code-block:: lean
-
-    namespace hidden
-    universes u v
-
-    instance lift_list {a : Type u} {b : Type v} [has_lift_t a b] :
-      has_lift (list a) (list b) :=
-    ⟨λ l, list.map (@coe a b _) l⟩
-
-    variables s : list nat
-    variables r : list int
-    #check ↑s ++ r
-
-    end hidden
-
-It is not an instance of ``has_coe`` because lists are frequently used for writing programs, and we do not want a linear-time operation to be silently introduced by Lean, and potentially mask mistakes performed by the user. By forcing the user to write ``↑``, she is making her intent clear to Lean.
-
-Let us now consider the second kind of coercion. By the *class of sorts*, we mean the collection of universes ``Type u``. A coercion of the second kind is of the form
-
-.. code-block:: text
-
-    c : Π x1 : A1, ..., xn : An, F x1 ... xn → Type u
-
-where ``F`` is a family of types as above. This allows us to write ``s : t`` whenever ``t`` is of type ``F a1 ... an``. In other words, the coercion allows us to view the elements of ``F a1 ... an`` as types. This is very useful when defining algebraic structures in which one component, the carrier of the structure, is a ``Type``. For example, we can define a semigroup as follows:
-
-.. code-block:: lean
-
-    universe u
-
-    structure Semigroup : Type (u+1) :=
-    (carrier : Type u)
-    (mul : carrier → carrier → carrier)
-    (mul_assoc : ∀ a b c : carrier,
-                   mul (mul a b) c = mul a (mul b c))
-
-    instance Semigroup_has_mul (S : Semigroup) :
-      has_mul (S.carrier) :=
-    ⟨S.mul⟩
-
-In other words, a semigroup consists of a type, ``carrier``, and a multiplication, ``mul``, with the property that the multiplication is associative. The ``instance`` command allows us to write ``a * b`` instead of ``Semigroup.mul S a b`` whenever we have ``a b : S.carrier``; notice that Lean can infer the argument ``S`` from the types of ``a`` and ``b``. The function ``Semigroup.carrier`` maps the class ``Semigroup`` to the sort ``Type u``:
-
-.. code-block:: lean
-
-    universe u
-
-    structure Semigroup : Type (u+1) :=
-    (carrier : Type u)
-    (mul : carrier → carrier → carrier)
-    (mul_assoc : ∀ a b c : carrier,
-                   mul (mul a b) c = mul a (mul b c))
-
-    instance Semigroup_has_mul (S : Semigroup) : has_mul (S.carrier) :=
-    ⟨S.mul⟩
-    -- BEGIN
-    #check Semigroup.carrier
-    -- END
-
-If we declare this function to be a coercion, then whenever we have a semigroup ``S : Semigroup``, we can write ``a : S`` instead of ``a : S.carrier``:
-
-.. code-block:: lean
-
-    universe u
-
-    structure Semigroup : Type (u+1) :=
-    (carrier : Type u)
-    (mul : carrier → carrier → carrier)
-    (mul_assoc : ∀ a b c : carrier, mul (mul a b) c = mul a (mul b c))
-
-    instance Semigroup_has_mul (S : Semigroup) : has_mul (S.carrier) :=
-    ⟨S.mul⟩
-
-    -- BEGIN
-    instance Semigroup_to_sort : has_coe_to_sort Semigroup :=
-    {S := Type u, coe := λ S, S.carrier}
-
-    example (S : Semigroup) (a b c : S) :
-      (a * b) * c = a * (b * c) :=
-    Semigroup.mul_assoc _ a b c
-    -- END
-
-It is the coercion that makes it possible to write ``(a b c : S)``. Note that, we define an instance of ``has_coe_to_sort Semigroup`` instead of ``has_coe Semigroup Type``. The reason is that when Lean needs a coercion to sort, it only knows it needs a type, but, in general, the universe is not known. The field ``S`` in the class ``has_coe_to_sort`` is used to specify the universe we are coercing too.
-
-By the *class of function types*, we mean the collection of Pi types ``Π z : B, C``. The third kind of coercion has the form
-
-.. code-block:: text
-
-    c : Π x1 : A1, ..., xn : An, y : F x1 ... xn, Π z : B, C
-
-where ``F`` is again a family of types and ``B`` and ``C`` can depend on ``x1, ..., xn, y``. This makes it possible to write ``t s`` whenever ``t`` is an element of ``F a1 ... an``. In other words, the coercion enables us to view elements of ``F a1 ... an`` as functions. Continuing the example above, we can define the notion of a morphism between semigroups ``S1`` and ``S2``. That is, a function from the carrier of ``S1`` to the carrier of ``S2`` (note the implicit coercion) that respects the multiplication. The projection ``morphism.mor`` takes a morphism to the underlying function:
-
-.. code-block:: lean
-
-    universe u
-
-    structure Semigroup : Type (u+1) :=
-    (carrier : Type u)
-    (mul : carrier → carrier → carrier)
-    (mul_assoc : ∀ a b c : carrier, mul (mul a b) c = mul a (mul b c))
-
-    instance Semigroup_has_mul (S : Semigroup) : has_mul (S.carrier) :=
-    ⟨S.mul⟩
-
-    -- BEGIN
-    instance Semigroup_to_sort : has_coe_to_sort Semigroup :=
-    {S := _, coe := λ S, S.carrier}
-
-    structure morphism (S1 S2 : Semigroup) :=
-    (mor : S1 → S2)
-    (resp_mul : ∀ a b : S1, mor (a * b) = (mor a) * (mor b))
-
-    #check @morphism.mor
-    -- END
-
-As a result, it is a prime candidate for the third type of coercion.
-
-.. code-block:: lean
-
-    universe u
-
-    structure Semigroup : Type (u+1) :=
-    (carrier : Type u)
-    (mul : carrier → carrier → carrier)
-    (mul_assoc : ∀ a b c : carrier, mul (mul a b) c = mul a (mul b c))
-
-    instance Semigroup_has_mul (S : Semigroup) : has_mul (S.carrier) :=
-    ⟨S.mul⟩
-
-
-    instance Semigroup_to_sort : has_coe_to_sort Semigroup :=
-    {S := _, coe := λ S, S.carrier}
-
-    structure morphism (S1 S2 : Semigroup) :=
-    (mor : S1 → S2)
-    (resp_mul : ∀ a b : S1, mor (a * b) = (mor a) * (mor b))
-
-    -- BEGIN
-    instance morphism_to_fun (S1 S2 : Semigroup) :
-      has_coe_to_fun (morphism S1 S2) :=
-    { F   := λ _, S1 → S2,
-      coe := λ m, m.mor }
-
-    lemma resp_mul {S1 S2 : Semigroup}
-        (f : morphism S1 S2) (a b : S1) :
-      f (a * b) = f a * f b :=
-    f.resp_mul a b
-
-    example (S1 S2 : Semigroup) (f : morphism S1 S2) (a : S1) :
+<h2><a class="header" href="#coercions-using-type-classes" id="coercions-using-type-classes">Coercions using Type Classes</a></h2>
+<p>The most basic type of coercion maps elements of one type to another. For example, a coercion from <code>Nat</code> to <code>Int</code> allows us to view any element <code>n : Nat</code> as an element of <code>Int</code>. But some coercions depend on parameters; for example, for any type <code>α</code>, we can view any element <code>as : List α</code> as an element of <code>Set α</code>, namely, the set of elements occurring in the list. The corresponding coercion is defined on the &quot;family&quot; of types <code>List α</code>, parameterized by <code>α</code>.</p>
+<p>Lean allows us to declare three kinds of coercions:</p>
+<ul>
+<li>from a family of types to another family of types</li>
+<li>from a family of types to the class of sorts</li>
+<li>from a family of types to the class of function types</li>
+</ul>
+<p>The first kind of coercion allows us to view any element of a member of the source family as an element of a corresponding member of the target family. The second kind of coercion allows us to view any element of a member of the source family as a type. The third kind of coercion allows us to view any element of the source family as a function. Let us consider each of these in turn.</p>
+<p>In Lean, coercions are implemented on top of the type class resolution framework. We define a coercion from <code>α</code> to <code>β</code> by declaring an instance of <code>Coe α β</code>. For example, we can define a coercion from <code>Bool</code> to <code>Prop</code> as follows:</p>
+<pre><code class="language-lean">instance : Coe Bool Prop where
+  coe b := b = true
+</code></pre>
+<p>This enables us to use boolean terms in if-then-else expressions:</p>
+<pre><code class="language-lean">#eval if true then 5 else 3
+#eval if false then 5 else 3
+</code></pre>
+<p>We can define a coercion from <code>List α</code> to <code>Set α</code> as follows:</p>
+<pre><code class="language-lean"><span class="boring">def Set (α : Type u) := α → Prop
+</span><span class="boring">def Set.empty {α : Type u} : Set α := fun _ =&gt; False
+</span><span class="boring">def Set.mem (a : α) (s : Set α) : Prop := s a
+</span><span class="boring">def Set.singleton (a : α) : Set α := fun x =&gt; x = a
+</span><span class="boring">def Set.union (a b : Set α) : Set α := fun x =&gt; a x ∨ b x
+</span><span class="boring">notation &quot;{ &quot; a &quot; }&quot; =&gt; Set.singleton a
+</span><span class="boring">infix:55 &quot; ∪ &quot; =&gt; Set.union
+</span>def List.toSet : List α → Set α
+  | []    =&gt; Set.empty
+  | a::as =&gt; {a} ∪ as.toSet
+
+instance : Coe (List α) (Set α) where
+  coe a := a.toSet
+
+def s : Set Nat := {1}
+#check s ∪ [2, 3]
+-- s ∪ List.toSet [2, 3] : Set Nat
+</code></pre>
+<p>We can use the notation <code>↑</code> to force a coercion to be introduced in a particular place. It is also helpful to make our intent clear, and work around limitations of the coercion resolution system.</p>
+<pre><code class="language-lean"><span class="boring">def Set (α : Type u) := α → Prop
+</span><span class="boring">def Set.empty {α : Type u} : Set α := fun _ =&gt; False
+</span><span class="boring">def Set.mem (a : α) (s : Set α) : Prop := s a
+</span><span class="boring">def Set.singleton (a : α) : Set α := fun x =&gt; x = a
+</span><span class="boring">def Set.union (a b : Set α) : Set α := fun x =&gt; a x ∨ b x
+</span><span class="boring">notation &quot;{ &quot; a &quot; }&quot; =&gt; Set.singleton a
+</span><span class="boring">infix:55 &quot; ∪ &quot; =&gt; Set.union
+</span><span class="boring">def List.toSet : List α → Set α
+</span><span class="boring">  | []    =&gt; Set.empty
+</span><span class="boring">  | a::as =&gt; {a} ∪ as.toSet
+</span><span class="boring">instance : Coe (List α) (Set α) where
+</span><span class="boring">  coe a := a.toSet
+</span>def s : Set Nat := {1}
+
+#check let x := ↑[2, 3]; s ∪ x
+-- let x := List.toSet [2, 3]; s ∪ x : Set Nat
+#check let x := [2, 3]; s ∪ x
+-- let x := [2, 3]; s ∪ List.toSet x : Set Nat
+</code></pre>
+<p>Lean also supports dependent coercions using the type class <code>CoeDep</code>. For example, we cannot coerce arbitrary propositions to <code>Bool</code>, only the ones that implement the <code>Decidable</code> typeclass.</p>
+<pre><code class="language-lean">instance (p : Prop) [Decidable p] : CoeDep Prop p Bool where
+  coe := decide p
+</code></pre>
+<p>Lean will also chain (non-dependent) coercions as necessary. Actually, the type class <code>CoeT</code> is the transitive closure of <code>Coe</code>.</p>
+<p>Let us now consider the second kind of coercion. By the <em>class of sorts</em>, we mean the collection of universes <code>Type u</code>. A coercion of the second kind is of the form:</p>
+<pre><code>    c : (x1 : A1) → ... → (xn : An) → F x1 ... xn → Type u
+</code></pre>
+<p>where <code>F</code> is a family of types as above. This allows us to write <code>s : t</code> whenever <code>t</code> is of type <code>F a1 ... an</code>. In other words, the coercion allows us to view the elements of <code>F a1 ... an</code> as types. This is very useful when defining algebraic structures in which one component, the carrier of the structure, is a <code>Type</code>. For example, we can define a semigroup as follows:</p>
+<pre><code class="language-lean">structure Semigroup where
+  carrier : Type u
+  mul : carrier → carrier → carrier
+  mul_assoc (a b c : carrier) : mul (mul a b) c = mul a (mul b c)
+
+instance (S : Semigroup) : Mul S.carrier where
+  mul a b := S.mul a b
+</code></pre>
+<p>In other words, a semigroup consists of a type, <code>carrier</code>, and a multiplication, <code>mul</code>, with the property that the multiplication is associative. The <code>instance</code> command allows us to write <code>a * b</code> instead of <code>Semigroup.mul S a b</code> whenever we have <code>a b : S.carrier</code>; notice that Lean can infer the argument <code>S</code> from the types of <code>a</code> and <code>b</code>. The function <code>Semigroup.carrier</code> maps the class <code>Semigroup</code> to the sort <code>Type u</code>:</p>
+<pre><code class="language-lean"><span class="boring">structure Semigroup where
+</span><span class="boring">  carrier : Type u
+</span><span class="boring">  mul : carrier → carrier → carrier
+</span><span class="boring">  mul_assoc (a b c : carrier) : mul (mul a b) c = mul a (mul b c)
+</span><span class="boring">instance (S : Semigroup) : Mul S.carrier where
+</span><span class="boring">  mul a b := S.mul a b
+</span>#check Semigroup.carrier
+</code></pre>
+<p>If we declare this function to be a coercion, then whenever we have a semigroup <code>S : Semigroup</code>, we can write <code>a : S</code> instead of <code>a : S.carrier</code>:</p>
+<pre><code class="language-lean"><span class="boring">structure Semigroup where
+</span><span class="boring">  carrier : Type u
+</span><span class="boring">  mul : carrier → carrier → carrier
+</span><span class="boring">  mul_assoc (a b c : carrier) : mul (mul a b) c = mul a (mul b c)
+</span><span class="boring">instance (S : Semigroup) : Mul S.carrier where
+</span><span class="boring">  mul a b := S.mul a b
+</span>instance : CoeSort Semigroup (Type u) where
+  coe s := s.carrier
+
+example (S : Semigroup) (a b c : S) : (a * b) * c = a * (b * c) :=
+  Semigroup.mul_assoc _ a b c
+</code></pre>
+<p>It is the coercion that makes it possible to write <code>(a b c : S)</code>. Note that, we define an instance of <code>CoeSort Semigroup (Type u)</code> instead of <code>Coe Semigroup (Type u)</code>.</p>
+<p>By the <em>class of function types</em>, we mean the collection of Pi types <code>(z : B) → C</code>. The third kind of coercion has the form:</p>
+<pre><code>    c : (x1 : A1) → ... → (xn : An) → (y : F x1 ... xn) → (z : B) → C
+</code></pre>
+<p>where <code>F</code> is again a family of types and <code>B</code> and <code>C</code> can depend on <code>x1, ..., xn, y</code>. This makes it possible to write <code>t s</code> whenever <code>t</code> is an element of <code>F a1 ... an</code>. In other words, the coercion enables us to view elements of <code>F a1 ... an</code> as functions. Continuing the example above, we can define the notion of a morphism between semigroups <code>S1</code> and <code>S2</code>. That is, a function from the carrier of <code>S1</code> to the carrier of <code>S2</code> (note the implicit coercion) that respects the multiplication. The projection <code>morphism.mor</code> takes a morphism to the underlying function:</p>
+<pre><code class="language-lean"><span class="boring">structure Semigroup where
+</span><span class="boring">  carrier : Type u
+</span><span class="boring">  mul : carrier → carrier → carrier
+</span><span class="boring">  mul_assoc (a b c : carrier) : mul (mul a b) c = mul a (mul b c)
+</span><span class="boring">instance (S : Semigroup) : Mul S.carrier where
+</span><span class="boring">  mul a b := S.mul a b
+</span><span class="boring">instance : CoeSort Semigroup (Type u) where
+</span><span class="boring">  coe s := s.carrier
+</span>structure Morphism (S1 S2 : Semigroup) where
+  mor : S1 → S2
+  resp_mul : ∀ a b : S1, mor (a * b) = (mor a) * (mor b)
+
+#check @Morphism.mor
+</code></pre>
+<p>As a result, it is a prime candidate for the third type of coercion.</p>
+<pre><code class="language-lean"><span class="boring">structure Semigroup where
+</span><span class="boring">  carrier : Type u
+</span><span class="boring">  mul : carrier → carrier → carrier
+</span><span class="boring">  mul_assoc (a b c : carrier) : mul (mul a b) c = mul a (mul b c)
+</span><span class="boring">instance (S : Semigroup) : Mul S.carrier where
+</span><span class="boring">  mul a b := S.mul a b
+</span><span class="boring">instance : CoeSort Semigroup (Type u) where
+</span><span class="boring">  coe s := s.carrier
+</span><span class="boring">structure Morphism (S1 S2 : Semigroup) where
+</span><span class="boring">  mor : S1 → S2
+</span><span class="boring">  resp_mul : ∀ a b : S1, mor (a * b) = (mor a) * (mor b)
+</span>instance (S1 S2 : Semigroup) : CoeFun (Morphism S1 S2) (fun _ =&gt; S1 → S2) where
+  coe m := m.mor
+
+theorem resp_mul {S1 S2 : Semigroup} (f : Morphism S1 S2) (a b : S1)
+        : f (a * b) = f a * f b :=
+  f.resp_mul a b
+
+example (S1 S2 : Semigroup) (f : Morphism S1 S2) (a : S1) :
       f (a * a * a) = f a * f a * f a :=
-    calc
-      f (a * a * a) = f (a * a) * f a : by rw [resp_mul f]
-                ... = f a * f a * f a : by rw [resp_mul f]
-    -- END
-
-With the coercion in place, we can write ``f (a * a * a)`` instead of ``morphism.mor f (a * a * a)``. When the ``morphism``, ``f``, is used where a function is expected, Lean inserts the coercion. Similar to ``has_coe_to_sort``, we have yet another class ``has_coe_to_fun`` for this class of coercions. The field ``F`` is used to specify the function type we are coercing to. This type may depend on the type we are coercing from.
-
-Finally, ``⇑f`` and ``↥S`` are notations for ``coe_fn f`` and ``coe_sort S``. They are the coercion operators for the function and sort classes.
-
-We can instruct Lean's pretty-printer to hide the operators ``↑`` and ``⇑`` with ``set_option``.
-
-.. code-block:: lean
-
-    universe u
-
-    structure Semigroup : Type (u+1) :=
-    (carrier : Type u)
-    (mul : carrier → carrier → carrier)
-    (mul_assoc : ∀ a b c : carrier, mul (mul a b) c = mul a (mul b c))
-
-    instance Semigroup_has_mul (S : Semigroup) : has_mul (S.carrier) :=
-    ⟨S.mul⟩
-
-    instance Semigroup_to_sort : has_coe_to_sort Semigroup :=
-    {S := _, coe := λ S, S.carrier}
-
-    structure morphism (S1 S2 : Semigroup) :=
-    (mor : S1 → S2)
-    (resp_mul : ∀ a b : S1, mor (a * b) = (mor a) * (mor b))
-
-    instance morphism_to_fun (S1 S2 : Semigroup) : has_coe_to_fun (morphism S1 S2) :=
-    { F   := λ _, S1 → S2,
-      coe := λ m, m.mor }
-
-    lemma resp_mul {S1 S2 : Semigroup} (f : morphism S1 S2) (a b : S1) : f (a * b) = f a * f b :=
-    f.resp_mul a b
-
-    -- BEGIN
-    theorem test (S1 S2 : Semigroup)
-        (f : morphism S1 S2) (a : S1) :
-      f (a * a * a) = f a * f a * f a :=
-    calc
-      f (a * a * a) = f (a * a) * f a : by rw [resp_mul f]
-                ... = f a * f a * f a : by rw [resp_mul f]
-
-    #check @test
-    set_option pp.coercions false
-    #check @test
-    -- END
--->
+  calc f (a * a * a)
+    _ = f (a * a) * f a := by rw [resp_mul f]
+    _ = f a * f a * f a := by rw [resp_mul f]
+</code></pre>
+<p>With the coercion in place, we can write <code>f (a * a * a)</code> instead of <code>f.mor (a * a * a)</code>. When the <code>Morphism</code>, <code>f</code>, is used where a function is expected, Lean inserts the coercion. Similar to <code>CoeSort</code>, we have yet another class <code>CoeFun</code> for this class of coercions. The field <code>F</code> is used to specify the function type we are coercing to. This type may depend on the type we are coercing from.</p>
 
                     </main>
 
@@ -1262,6 +1081,9 @@ We can instruct Lean's pretty-printer to hide the operators ``↑`` and ``⇑`` 
         
         <script type="text/javascript">
             window.playground_copyable = true;
+            window.clip_buttons = true;
+            window.tryit_buttons = false;
+            window.side_bar = true;
         </script>
         
 

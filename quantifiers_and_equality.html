@@ -59,11 +59,11 @@
                 var theme = localStorage.getItem('mdbook-theme');
                 var sidebar = localStorage.getItem('mdbook-sidebar');
 
-                if (theme.startsWith('"') && theme.endsWith('"')) {
+                if (theme && theme.startsWith('"') && theme.endsWith('"')) {
                     localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
                 }
 
-                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                if (sidebar && sidebar.startsWith('"') && sidebar.endsWith('"')) {
                     localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
                 }
             } catch (e) { }
@@ -216,7 +216,7 @@ can think of an implication <code>p → q</code> between propositions as the
 special case of <code>∀ x : p, q</code> in which the expression <code>q</code> does not
 depend on <code>x</code>.</p>
 <p>Here is an example of how the propositions-as-types correspondence gets put into practice.</p>
-<pre><code class="language-lean">example (α : Type) (p q : α → Prop) : (∀ x : α, p x ∧ q x) → ∀ y : α, p y  :=
+<pre><code class="language-lean">example (α : Type) (p q : α → Prop) : (∀ x : α, p x ∧ q x) → ∀ y : α, p y :=
   fun h : ∀ x : α, p x ∧ q x =&gt;
   fun y : α =&gt;
   show p y from (h y).left
@@ -234,7 +234,7 @@ variables are considered to be equivalent. So, for example, we could
 have used the same variable, <code>x</code>, in both the hypothesis and
 conclusion, and instantiated it by a different variable, <code>z</code>, in the
 proof:</p>
-<pre><code class="language-lean">example (α : Type) (p q : α → Prop) : (∀ x : α, p x ∧ q x) → ∀ x : α, p x  :=
+<pre><code class="language-lean">example (α : Type) (p q : α → Prop) : (∀ x : α, p x ∧ q x) → ∀ x : α, p x :=
   fun h : ∀ x : α, p x ∧ q x =&gt;
   fun z : α =&gt;
   show p z from And.left (h z)
@@ -310,7 +310,7 @@ Russell blamed set-theoretic paradoxes on the &quot;vicious circles&quot; that
 arise when we define a property by quantifying over a collection that
 includes the very property being defined. Notice that if <code>α</code> is any
 type, we can form the type <code>α → Prop</code> of all predicates on <code>α</code>
-(the &quot;power type of <code>α</code>&quot;). The impredicativity of Prop means that we
+(the &quot;power type of <code>α</code>&quot;). The impredicativity of <code>Prop</code> means that we
 can form propositions that quantify over <code>α → Prop</code>. In particular,
 we can define predicates on <code>α</code> by quantifying over all predicates
 on <code>α</code>, which is exactly the type of circularity that was once
@@ -354,13 +354,13 @@ reflexivity:</p>
 <pre><code class="language-lean">variable (α β : Type)
 
 example (f : α → β) (a : α) : (fun x =&gt; f x) a = f a := Eq.refl _
-example (a : α) (b : α) : (a, b).1 = a := Eq.refl _
+example (a : α) (b : β) : (a, b).1 = a := Eq.refl _
 example : 2 + 3 = 5 := Eq.refl _
 </code></pre>
 <p>This feature of the framework is so important that the library defines a notation <code>rfl</code> for <code>Eq.refl _</code>:</p>
 <pre><code class="language-lean"><span class="boring">variable (α β : Type)
 </span>example (f : α → β) (a : α) : (fun x =&gt; f x) a = f a := rfl
-example (a : α) (b : α) : (a, b).1 = a := rfl
+example (a : α) (b : β) : (a, b).1 = a := rfl
 example : 2 + 3 = 5 := rfl
 </code></pre>
 <p>Equality is much more than an equivalence relation, however. It has
@@ -396,7 +396,7 @@ example : f a = g a := congrFun h₂ a
 example : f a = g b := congr h₂ h₁
 </code></pre>
 <p>Lean's library contains a large number of common identities, such as these:</p>
-<pre><code class="language-lean">variable (a b c d : Nat)
+<pre><code class="language-lean">variable (a b c : Nat)
 
 example : a + 0 = a := Nat.add_zero a
 example : 0 + a = a := Nat.zero_add a
@@ -415,13 +415,8 @@ example : (a + b) * c = a * c + b * c := Nat.right_distrib a b c
 for <code>Nat.left_distrib</code> and <code>Nat.right_distrib</code>, respectively.  The
 properties above are stated for the natural numbers (type <code>Nat</code>).</p>
 <p>Here is an example of a calculation in the natural numbers that uses
-substitution combined with associativity, commutativity, and
-distributivity.</p>
-<pre><code class="language-lean">example (x y z : Nat) : x * (y + z) = x * y + x * z := Nat.mul_add x y z
-example (x y z : Nat) : (x + y) * z = x * z + y * z := Nat.add_mul x y z
-example (x y z : Nat) : x + y + z = x + (y + z) := Nat.add_assoc x y z
-
-example (x y : Nat) : (x + y) * (x + y) = x * x + y * x + x * y + y * y :=
+substitution combined with associativity and distributivity.</p>
+<pre><code class="language-lean">example (x y : Nat) : (x + y) * (x + y) = x * x + y * x + x * y + y * y :=
   have h1 : (x + y) * (x + y) = (x + y) * x + (x + y) * y :=
     Nat.mul_add (x + y) x y
   have h2 : (x + y) * (x + y) = x * x + y * x + (x * y + y * y) :=
@@ -446,19 +441,27 @@ reasoning is supported by a term rewriter, a simplifier, and other
 kinds of automation. The term rewriter and simplifier are described
 briefly in the next section, and then in greater detail in the next
 chapter.</p>
-<h2><a class="header" href="#a-name_calc_proofsacalculational-proofs" id="a-name_calc_proofsacalculational-proofs"><a name="_calc_proofs"></a>Calculational Proofs</a></h2>
+<h2><a class="header" href="#calculational-proofs" id="calculational-proofs">Calculational Proofs</a></h2>
 <p>A calculational proof is just a chain of intermediate results that are
 meant to be composed by basic principles such as the transitivity of
-equality. In Lean, a calculation proof starts with the keyword
+equality. In Lean, a calculational proof starts with the keyword
 <code>calc</code>, and has the following syntax:</p>
 <pre><code>calc
   &lt;expr&gt;_0  'op_1'  &lt;expr&gt;_1  ':='  &lt;proof&gt;_1
-    '_'     'op_2'  &lt;expr&gt;_2  ':='  &lt;proof&gt;_2
-     ...
-    '_'     'op_n'  &lt;expr&gt;_n  ':='  &lt;proof&gt;_n
-
+  '_'       'op_2'  &lt;expr&gt;_2  ':='  &lt;proof&gt;_2
+  ...
+  '_'       'op_n'  &lt;expr&gt;_n  ':='  &lt;proof&gt;_n
 </code></pre>
-<p>Each <code>&lt;proof&gt;_i</code> is a proof for <code>&lt;expr&gt;_{i-1} op_i &lt;expr&gt;_i</code>.</p>
+<p>Note that the <code>calc</code> relations all have the same indentation. Each
+<code>&lt;proof&gt;_i</code> is a proof for <code>&lt;expr&gt;_{i-1} op_i &lt;expr&gt;_i</code>.</p>
+<p>We can also use <code>_</code> in the first relation (right after <code>&lt;expr&gt;_0</code>)
+which is useful to align the sequence of relation/proof pairs:</p>
+<pre><code>calc &lt;expr&gt;_0 
+    '_' 'op_1' &lt;expr&gt;_1 ':=' &lt;proof&gt;_1
+    '_' 'op_2' &lt;expr&gt;_2 ':=' &lt;proof&gt;_2
+    ...
+    '_' 'op_n' &lt;expr&gt;_n ':=' &lt;proof&gt;_n
+</code></pre>
 <p>Here is an example:</p>
 <pre><code class="language-lean">variable (a b c d e : Nat)
 variable (h1 : a = b)
@@ -474,7 +477,7 @@ theorem T : a = e :=
     _ = 1 + d  := Nat.add_comm d 1
     _ = e      := Eq.symm h4
 </code></pre>
-<p>The style of writing proofs is most effective when it is used in
+<p>This style of writing proofs is most effective when it is used in
 conjunction with the <code>simp</code> and <code>rewrite</code> tactics, which are
 discussed in greater detail in the next chapter. For example, using
 the abbreviation <code>rw</code> for rewrite, the proof above could be written
@@ -490,7 +493,7 @@ as follows:</p>
     _ = c + 1  := by rw [h2]
     _ = d + 1  := by rw [h3]
     _ = 1 + d  := by rw [Nat.add_comm]
-    _ =  e     := by rw [h4]
+    _ = e      := by rw [h4]
 </code></pre>
 <p>Essentially, the <code>rw</code> tactic uses a given equality (which can be a
 hypothesis, a theorem name, or a complex term) to &quot;rewrite&quot; the
@@ -507,7 +510,7 @@ shortened to this:</p>
   calc
     a = d + 1  := by rw [h1, h2, h3]
     _ = 1 + d  := by rw [Nat.add_comm]
-    _ =  e     := by rw [h4]
+    _ = e      := by rw [h4]
 </code></pre>
 <p>Or even this:</p>
 <pre><code class="language-lean"><span class="boring">variable (a b c d e : Nat)
@@ -541,14 +544,60 @@ some form of transitivity. It can even combine different relations.</p>
     _ ≤ c + 1 := Nat.succ_le_succ h2
     _ &lt; d     := h3
 </code></pre>
+<p>You can &quot;teach&quot; <code>calc</code> new transitivity theorems by adding new instances
+of the <code>Trans</code> type class. Type classes are introduced later, but the following
+small example demonstrates how to extend the <code>calc</code> notation using new <code>Trans</code> instances.</p>
+<pre><code class="language-lean">def divides (x y : Nat) : Prop :=
+  ∃ k, k*x = y
+
+def divides_trans (h₁ : divides x y) (h₂ : divides y z) : divides x z :=
+  let ⟨k₁, d₁⟩ := h₁
+  let ⟨k₂, d₂⟩ := h₂
+  ⟨k₁ * k₂, by rw [Nat.mul_comm k₁ k₂, Nat.mul_assoc, d₁, d₂]⟩
+
+def divides_mul (x : Nat) (k : Nat) : divides x (k*x) :=
+  ⟨k, rfl⟩
+
+instance : Trans divides divides divides where
+  trans := divides_trans
+
+example (h₁ : divides x y) (h₂ : y = z) : divides x (2*z) :=
+  calc
+    divides x y     := h₁
+    _ = z           := h₂
+    divides _ (2*z) := divides_mul ..
+
+infix:50 &quot; ∣ &quot; =&gt; divides
+
+example (h₁ : divides x y) (h₂ : y = z) : divides x (2*z) :=
+  calc
+    x ∣ y   := h₁
+    _ = z   := h₂
+    _ ∣ 2*z := divides_mul ..
+</code></pre>
+<p>The example above also makes it clear that you can use <code>calc</code> even if you
+do not have an infix notation for your relation. Finally we remark that
+the vertical bar <code>∣</code> in the example above is the unicode one. We use
+unicode to make sure we do not overload the ASCII <code>|</code> used in the
+<code>match .. with</code> expression.</p>
 <p>With <code>calc</code>, we can write the proof in the last section in a more
 natural and perspicuous way.</p>
 <pre><code class="language-lean">example (x y : Nat) : (x + y) * (x + y) = x * x + y * x + x * y + y * y :=
   calc
     (x + y) * (x + y) = (x + y) * x + (x + y) * y  := by rw [Nat.mul_add]
-        _ = x * x + y * x + (x + y) * y            := by rw [Nat.add_mul]
-        _ = x * x + y * x + (x * y + y * y)        := by rw [Nat.add_mul]
-        _ = x * x + y * x + x * y + y * y          := by rw [←Nat.add_assoc]
+    _ = x * x + y * x + (x + y) * y                := by rw [Nat.add_mul]
+    _ = x * x + y * x + (x * y + y * y)            := by rw [Nat.add_mul]
+    _ = x * x + y * x + x * y + y * y              := by rw [←Nat.add_assoc]
+</code></pre>
+<p>The alternative <code>calc</code> notation is worth considering here. When the
+first expression is taking this much space, using <code>_</code> in the first
+relation naturally aligns all relations:</p>
+<pre><code class="language-lean">example (x y : Nat) : (x + y) * (x + y) = x * x + y * x + x * y + y * y :=
+  calc (x + y) * (x + y)
+    _ = (x + y) * x + (x + y) * y       := by rw [Nat.mul_add]
+    _ = x * x + y * x + (x + y) * y     := by rw [Nat.add_mul]
+    _ = x * x + y * x + (x * y + y * y) := by rw [Nat.add_mul]
+    _ = x * x + y * x + x * y + y * y   := by rw [←Nat.add_assoc]
 </code></pre>
 <p>Here the left arrow before <code>Nat.add_assoc</code> tells rewrite to use the
 identity in the opposite direction. (You can enter it with <code>\l</code> or
@@ -558,7 +607,7 @@ both <code>rw</code> and <code>simp</code> can do the job on their own:</p>
   by rw [Nat.mul_add, Nat.add_mul, Nat.add_mul, ←Nat.add_assoc]
 
 example (x y : Nat) : (x + y) * (x + y) = x * x + y * x + x * y + y * y :=
-  by simp [Nat.mul_add, Nat.add_mul, Nat.add_assoc, Nat.add_left_comm]
+  by simp [Nat.mul_add, Nat.add_mul, Nat.add_assoc]
 </code></pre>
 <h2><a class="header" href="#the-existential-quantifier" id="the-existential-quantifier">The Existential Quantifier</a></h2>
 <p>Finally, consider the existential quantifier, which can be written as
@@ -624,7 +673,7 @@ showing that <code>q</code> follows from <code>p w</code> for an arbitrary value
 <code>w</code>. Roughly speaking, since we know there is an <code>x</code> satisfying
 <code>p x</code>, we can give it a name, say, <code>w</code>. If <code>q</code> does not mention
 <code>w</code>, then showing that <code>q</code> follows from <code>p w</code> is tantamount to
-showing the <code>q</code> follows from the existence of any such <code>x</code>. Here
+showing that <code>q</code> follows from the existence of any such <code>x</code>. Here
 is an example:</p>
 <pre><code class="language-lean">variable (α : Type) (p q : α → Prop)
 
@@ -688,7 +737,7 @@ in the <code>fun</code> expression:</p>
 </code></pre>
 <p>We will see in <a href="./induction_and_recursion.html">Chapter Induction and Recursion</a> that all these variations are
 instances of a more general pattern-matching construct.</p>
-<p>In the following example, we define <code>even a</code> as <code>∃ b, a = 2*b</code>,
+<p>In the following example, we define <code>is_even a</code> as <code>∃ b, a = 2 * b</code>,
 and then we show that the sum of two even numbers is an even number.</p>
 <pre><code class="language-lean">def is_even (a : Nat) := ∃ b, a = 2 * b
 
@@ -696,9 +745,9 @@ theorem even_plus_even (h1 : is_even a) (h2 : is_even b) : is_even (a + b) :=
   Exists.elim h1 (fun w1 (hw1 : a = 2 * w1) =&gt;
   Exists.elim h2 (fun w2 (hw2 : b = 2 * w2) =&gt;
     Exists.intro (w1 + w2)
-      (calc
-        a + b = 2 * w1 + 2 * w2  := by rw [hw1, hw2]
-          _   = 2*(w1 + w2)      := by rw [Nat.mul_add])))
+      (calc a + b
+        _ = 2 * w1 + 2 * w2 := by rw [hw1, hw2]
+        _ = 2 * (w1 + w2)   := by rw [Nat.mul_add])))
 </code></pre>
 <p>Using the various gadgets described in this chapter --- the match
 statement, anonymous constructors, and the <code>rewrite</code> tactic, we can
@@ -723,7 +772,7 @@ example (h : ¬ ∀ x, ¬ p x) : ∃ x, p x :=
       have h2 : ∀ x, ¬ p x :=
         fun x =&gt;
         fun h3 : p x =&gt;
-        have h4 : ∃ x, p x :=  ⟨x, h3⟩
+        have h4 : ∃ x, p x := ⟨x, h3⟩
         show False from h1 h4
       show False from h h2)
 </code></pre>
@@ -734,11 +783,10 @@ nonconstructive, and hence require some form of classical reasoning.</p>
 <pre><code class="language-lean">open Classical
 
 variable (α : Type) (p q : α → Prop)
-variable (a : α)
 variable (r : Prop)
 
 example : (∃ x : α, r) → r := sorry
-example : r → (∃ x : α, r) := sorry
+example (a : α) : r → (∃ x : α, r) := sorry
 example : (∃ x, p x ∧ r) ↔ (∃ x, p x) ∧ r := sorry
 example : (∃ x, p x ∨ q x) ↔ (∃ x, p x) ∨ (∃ x, q x) := sorry
 
@@ -748,13 +796,11 @@ example : (¬ ∃ x, p x) ↔ (∀ x, ¬ p x) := sorry
 example : (¬ ∀ x, p x) ↔ (∃ x, ¬ p x) := sorry
 
 example : (∀ x, p x → r) ↔ (∃ x, p x) → r := sorry
-example : (∃ x, p x → r) ↔ (∀ x, p x) → r := sorry
-example : (∃ x, r → p x) ↔ (r → ∃ x, p x) := sorry
+example (a : α) : (∃ x, p x → r) ↔ (∀ x, p x) → r := sorry
+example (a : α) : (∃ x, r → p x) ↔ (r → ∃ x, p x) := sorry
 </code></pre>
-<p>Notice that the declaration <code>variable (a : α)</code> amounts to the
-assumption that there is at least one element of type <code>α</code>.  This
-assumption is needed in the second example, as well as in the last
-two.</p>
+<p>Notice that the second example and the last two examples require the
+assumption that there is at least one element <code>a</code> of type <code>α</code>.</p>
 <p>Here are solutions to two of the more difficult ones:</p>
 <pre><code class="language-lean">open Classical
 
@@ -777,7 +823,7 @@ example : (∃ x, p x → r) ↔ (∀ x, p x) → r :=
   Iff.intro
     (fun ⟨b, (hb : p b → r)⟩ =&gt;
      fun h2 : ∀ x, p x =&gt;
-     show r from  hb (h2 b))
+     show r from hb (h2 b))
     (fun h1 : (∀ x, p x) → r =&gt;
      show ∃ x, p x → r from
        byCases
@@ -857,11 +903,11 @@ though using it for data is somewhat odd:</p>
 <ol>
 <li>Prove these equivalences:</li>
 </ol>
-<pre><code class="language-lean"> variable (α : Type) (p q : α → Prop)
+<pre><code class="language-lean">variable (α : Type) (p q : α → Prop)
 
- example : (∀ x, p x ∧ q x) ↔ (∀ x, p x) ∧ (∀ x, q x) := sorry
- example : (∀ x, p x → q x) → (∀ x, p x) → (∀ x, q x) := sorry
- example : (∀ x, p x) ∨ (∀ x, q x) → ∀ x, p x ∨ q x := sorry
+example : (∀ x, p x ∧ q x) ↔ (∀ x, p x) ∧ (∀ x, q x) := sorry
+example : (∀ x, p x → q x) → (∀ x, p x) → (∀ x, q x) := sorry
+example : (∀ x, p x) ∨ (∀ x, q x) → ∀ x, p x ∨ q x := sorry
 </code></pre>
 <p>You should also try to understand why the reverse implication is not derivable in the last example.</p>
 <ol start="2">
@@ -883,9 +929,9 @@ town there is a (male) barber that shaves all and only the men who
 do not shave themselves. Prove that this is a contradiction:</li>
 </ol>
 <pre><code class="language-lean">variable (men : Type) (barber : men)
-variable  (shaves : men → men → Prop)
+variable (shaves : men → men → Prop)
 
-example (h : ∀ x : men, shaves barber x ↔ ¬ shaves x x) : false := sorry
+example (h : ∀ x : men, shaves barber x ↔ ¬ shaves x x) : False := sorry
 </code></pre>
 <ol start="4">
 <li>Remember that, without any parameters, an expression of type
@@ -965,6 +1011,9 @@ Quantifier section as you can.</li>
         
         <script type="text/javascript">
             window.playground_copyable = true;
+            window.clip_buttons = true;
+            window.tryit_buttons = false;
+            window.side_bar = true;
         </script>
         
 
