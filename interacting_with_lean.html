@@ -201,8 +201,8 @@ interpreted relative to the Lean <em>search path</em>. Information as to how
 the search path is determined can be found on the
 <a href="https://lean-lang.org/documentation/">documentation pages</a>.
 By default, it includes the standard library directory, and (in some contexts)
-the root of the user's local project. One can also specify imports relative to the current directory; for example,
-importing is transitive. In other words, if you import <code>Foo</code> and <code>Foo</code> imports <code>Bar</code>,
+the root of the user's local project.</p>
+<p>Importing is transitive. In other words, if you import <code>Foo</code> and <code>Foo</code> imports <code>Bar</code>,
 then you also have access to the contents of <code>Bar</code>, and do not need to import it explicitly.</p>
 <h2><a class="header" href="#more-on-sections" id="more-on-sections">More on Sections</a></h2>
 <p>Lean provides various sectioning mechanisms to help structure a
@@ -467,7 +467,7 @@ theorem th2 {α : Type u} {r : α → α → Prop}
 theorem th3 {α : Type u} {r : α → α → Prop}
             (reflr : reflexive r) (euclr : euclidean r)
             : transitive r :=
- @th2 _ _ (@th1 _ _ reflr @euclr) @euclr
+ th2 (th1 reflr @euclr) @euclr
 
 variable (r : α → α → Prop)
 variable (euclr : euclidean r)
@@ -478,9 +478,9 @@ variable (euclr : euclidean r)
 relation that is reflexive and euclidean is symmetric, and <code>th2</code>
 shows that a relation that is symmetric and euclidean is
 transitive. Then <code>th3</code> combines the two results. But notice that we
-have to manually disable the implicit arguments in <code>th1</code>, <code>th2</code>,
-and <code>euclr</code>, because otherwise too many implicit arguments are
-inserted. The problem goes away if we use weak implicit arguments:</p>
+have to manually disable the implicit arguments in <code>euclr</code>, because
+otherwise too many implicit arguments are inserted. The problem goes
+away if we use weak implicit arguments:</p>
 <pre><code class="language-lean">def reflexive {α : Type u} (r : α → α → Prop) : Prop :=
   ∀ (a : α), r a a
 
@@ -941,7 +941,7 @@ This feature combined with named arguments is useful for writing patterns. Here 
 <pre><code class="language-lean">inductive Term where
   | var    (name : String)
   | num    (val : Nat)
-  | add    (fn : Term) (arg : Term)
+  | app    (fn : Term) (arg : Term)
   | lambda (name : String) (type : Term) (body : Term)
 
 def getBinderName : Term → Option String

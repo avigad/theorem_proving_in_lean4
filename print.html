@@ -462,14 +462,14 @@ along the y-axis represents a change in what is sometimes referred to as
 <p>Some operations, however, need to be <em>polymorphic</em> over type
 universes. For example, <code>List α</code> should make sense for any type
 <code>α</code>, no matter which type universe <code>α</code> lives in. This explains the
-type annotation of the function <code>List</code>:</p>
-<pre><code class="language-lean">#check List    -- Type u_1 → Type u_1
+type signature of the function <code>List</code>:</p>
+<pre><code class="language-lean">#check List    -- List.{u} (α : Type u) : Type u
 </code></pre>
-<p>Here <code>u_1</code> is a variable ranging over type levels. The output of the
+<p>Here <code>u</code> is a variable ranging over type levels. The output of the
 <code>#check</code> command means that whenever <code>α</code> has type <code>Type n</code>,
 <code>List α</code> also has type <code>Type n</code>. The function <code>Prod</code> is
 similarly polymorphic:</p>
-<pre><code class="language-lean">#check Prod    -- Type u_1 → Type u_2 → Type (max u_1 u_2)
+<pre><code class="language-lean">#check Prod    -- Prod.{u, v} (α : Type u) (β : Type v) : Type (max u v)
 </code></pre>
 <p>To define polymorphic constants, Lean allows you to
 declare universe variables explicitly using the <code>universe</code> command:</p>
@@ -489,8 +489,8 @@ def F (α : Type u) : Type u := Prod α α
 from an expression as follows:</p>
 <pre><code class="language-lean">#check fun (x : Nat) =&gt; x + 5   -- Nat → Nat
 #check λ (x : Nat) =&gt; x + 5     -- λ and fun mean the same thing
-#check fun x : Nat =&gt; x + 5     -- Nat inferred
-#check λ x : Nat =&gt; x + 5       -- Nat inferred
+#check fun x =&gt; x + 5     -- Nat inferred
+#check λ x =&gt; x + 5       -- Nat inferred
 </code></pre>
 <p>You can evaluate a lambda function by passing the required parameters:</p>
 <pre><code class="language-lean">#eval (λ x : Nat =&gt; x + 5) 10    -- 15
@@ -925,7 +925,7 @@ function for lists of type <code>α</code>. In other words, for every <code>α</
 <code>as : List α</code>, and returns a new list, so you have <code>cons α a as : List α</code>.</p>
 <p>It is clear that <code>cons α</code> should have type <code>α → List α → List α</code>.
 But what type should <code>cons</code> have?  A first guess might be
-<code>Type → α → list α → list α</code>, but, on reflection, this does not make
+<code>Type → α → List α → List α</code>, but, on reflection, this does not make
 sense: the <code>α</code> in this expression does not refer to anything,
 whereas it should refer to the argument of type <code>Type</code>.  In other
 words, <em>assuming</em> <code>α : Type</code> is the first argument to the function,
@@ -966,7 +966,8 @@ notion of a function type <code>α → β</code> by allowing <code>β</code> to 
 the Cartesian product <code>α × β</code> in the same way. Dependent products
 are also called <em>sigma</em> types, and you can also write them as
 <code>Σ a : α, β a</code>. You can use <code>⟨a, b⟩</code> or <code>Sigma.mk a b</code> to create a
-dependent pair.</p>
+dependent pair.  The <code>⟨</code> and <code>⟩</code> characters may be typed with
+<code>\langle</code> and <code>\rangle</code> or <code>\&lt;</code> and <code>\&gt;</code>, respectively.</p>
 <pre><code class="language-lean">universe u v
 
 def f (α : Type u) (β : α → Type v) (a : α) (b : β a) : (a : α) × β a :=
@@ -993,10 +994,10 @@ def h2 (x : Nat) : Nat :=
 </span><span class="boring">def Lst.cons (α : Type u) (a : α) (as : Lst α) : Lst α := List.cons a as
 </span><span class="boring">def Lst.nil (α : Type u) : Lst α := List.nil
 </span><span class="boring">def Lst.append (α : Type u) (as bs : Lst α) : Lst α := List.append as bs
-</span>#check Lst          -- Type u_1 → Type u_1
-#check Lst.cons     -- (α : Type u_1) → α → Lst α → Lst α
-#check Lst.nil      -- (α : Type u_1) → Lst α
-#check Lst.append   -- (α : Type u_1) → Lst α → Lst α → Lst α
+</span>#check Lst          -- Lst.{u} (α : Type u) : Type u
+#check Lst.cons     -- Lst.cons.{u} (α : Type u) (a : α) (as : Lst α) : Lst α
+#check Lst.nil      -- Lst.nil.{u} (α : Type u) : Lst α
+#check Lst.append   -- Lst.append.{u} (α : Type u) (as bs : Lst α) : Lst α
 </code></pre>
 <p>Then, you can construct lists of <code>Nat</code> as follows.</p>
 <pre><code class="language-lean"><span class="boring">universe u
@@ -1130,7 +1131,7 @@ declared an argument to a function to be implicit, but now want to
 provide the argument explicitly. If <code>foo</code> is such a function, the
 notation <code>@foo</code> denotes the same function with all the arguments
 made explicit.</p>
-<pre><code class="language-lean">#check @id        -- {α : Type u_1} → α → α
+<pre><code class="language-lean">#check @id        -- {α : Sort u_1} → α → α
 #check @id Nat    -- Nat → Nat
 #check @id Bool   -- Bool → Bool
 
@@ -1997,9 +1998,9 @@ variable (a b c : α)
 variable (hab : r a b) (hbc : r b c)
 
 #check trans_r    -- ∀ (x y z : α), r x y → r y z → r x z
-#check trans_r a b c
-#check trans_r a b c hab
-#check trans_r a b c hab hbc
+#check trans_r a b c -- r a b → r b c → r a c
+#check trans_r a b c hab -- r b c → r a c
+#check trans_r a b c hab hbc -- r a c
 </code></pre>
 <p>Think about what is going on here. When we instantiate <code>trans_r</code> at
 the values <code>a b c</code>, we end up with a proof of <code>r a b → r b c → r a c</code>.
@@ -2071,17 +2072,17 @@ Lean's library, namely, the equality relation. In <a href="inductive_types.html"
 we will explain <em>how</em> equality is defined from the primitives of Lean's logical framework.
 In the meanwhile, here we explain how to use it.</p>
 <p>Of course, a fundamental property of equality is that it is an equivalence relation:</p>
-<pre><code class="language-lean">#check Eq.refl    -- ∀ (a : ?m.1), a = a
-#check Eq.symm    -- ?m.2 = ?m.3 → ?m.3 = ?m.2
-#check Eq.trans   -- ?m.2 = ?m.3 → ?m.3 = ?m.4 → ?m.2 = ?m.4
+<pre><code class="language-lean">#check Eq.refl    -- Eq.refl.{u_1} {α : Sort u_1} (a : α) : a = a
+#check Eq.symm    -- Eq.symm.{u} {α : Sort u} {a b : α} (h : a = b) : b = a
+#check Eq.trans   -- Eq.trans.{u} {α : Sort u} {a b c : α} (h₁ : a = b) (h₂ : b = c) : a = c
 </code></pre>
 <p>We can make the output easier to read by telling Lean not to insert
 the implicit arguments (which are displayed here as metavariables).</p>
 <pre><code class="language-lean">universe u
 
-#check @Eq.refl.{u}   -- ∀ {α : Sort u} (a : α), a = a
-#check @Eq.symm.{u}   -- ∀ {α : Sort u} {a b : α}, a = b → b = a
-#check @Eq.trans.{u}  -- ∀ {α : Sort u} {a b c : α}, a = b → b = c → a = c
+#check @Eq.refl.{u}   -- @Eq.refl : ∀ {α : Sort u} (a : α), a = a
+#check @Eq.symm.{u}   -- @Eq.symm : ∀ {α : Sort u} {a b : α}, a = b → b = a
+#check @Eq.trans.{u}  -- @Eq.trans : ∀ {α : Sort u} {a b c : α}, a = b → b = c → a = c
 </code></pre>
 <p>The inscription <code>.{u}</code> tells Lean to instantiate the constants at the universe <code>u</code>.</p>
 <p>Thus, for example, we can specialize the example from the previous section to the equality relation:</p>
@@ -2378,7 +2379,7 @@ example (x : Nat) (h : x &gt; 0) : ∃ y, y &lt; x :=
 example (x y z : Nat) (hxy : x &lt; y) (hyz : y &lt; z) : ∃ w, x &lt; w ∧ w &lt; z :=
   Exists.intro y (And.intro hxy hyz)
 
-#check @Exists.intro
+#check @Exists.intro -- ∀ {α : Sort u_1} {p : α → Prop} (w : α), p w → Exists p
 </code></pre>
 <p>We can use the anonymous constructor notation <code>⟨t, h⟩</code> for
 <code>Exists.intro t h</code>, when the type is clear from the context.</p>
@@ -2394,7 +2395,7 @@ example (x y z : Nat) (hxy : x &lt; y) (hyz : y &lt; z) : ∃ w, x &lt; w ∧ w 
 </code></pre>
 <p>Note that <code>Exists.intro</code> has implicit arguments: Lean has to infer
 the predicate <code>p : α → Prop</code> in the conclusion <code>∃ x, p x</code>.  This
-is not a trivial affair. For example, if we have have
+is not a trivial affair. For example, if we have
 <code>hg : g 0 0 = 0</code> and write <code>Exists.intro 0 hg</code>, there are many possible values
 for the predicate <code>p</code>, corresponding to the theorems <code>∃ x, g x x = x</code>,
 <code>∃ x, g x x = 0</code>, <code>∃ x, g x 0 = x</code>, etc. Lean uses the
@@ -3988,8 +3989,8 @@ interpreted relative to the Lean <em>search path</em>. Information as to how
 the search path is determined can be found on the
 <a href="https://lean-lang.org/documentation/">documentation pages</a>.
 By default, it includes the standard library directory, and (in some contexts)
-the root of the user's local project. One can also specify imports relative to the current directory; for example,
-importing is transitive. In other words, if you import <code>Foo</code> and <code>Foo</code> imports <code>Bar</code>,
+the root of the user's local project.</p>
+<p>Importing is transitive. In other words, if you import <code>Foo</code> and <code>Foo</code> imports <code>Bar</code>,
 then you also have access to the contents of <code>Bar</code>, and do not need to import it explicitly.</p>
 <h2><a class="header" href="#more-on-sections" id="more-on-sections">More on Sections</a></h2>
 <p>Lean provides various sectioning mechanisms to help structure a
@@ -4254,7 +4255,7 @@ theorem th2 {α : Type u} {r : α → α → Prop}
 theorem th3 {α : Type u} {r : α → α → Prop}
             (reflr : reflexive r) (euclr : euclidean r)
             : transitive r :=
- @th2 _ _ (@th1 _ _ reflr @euclr) @euclr
+ th2 (th1 reflr @euclr) @euclr
 
 variable (r : α → α → Prop)
 variable (euclr : euclidean r)
@@ -4265,9 +4266,9 @@ variable (euclr : euclidean r)
 relation that is reflexive and euclidean is symmetric, and <code>th2</code>
 shows that a relation that is symmetric and euclidean is
 transitive. Then <code>th3</code> combines the two results. But notice that we
-have to manually disable the implicit arguments in <code>th1</code>, <code>th2</code>,
-and <code>euclr</code>, because otherwise too many implicit arguments are
-inserted. The problem goes away if we use weak implicit arguments:</p>
+have to manually disable the implicit arguments in <code>euclr</code>, because
+otherwise too many implicit arguments are inserted. The problem goes
+away if we use weak implicit arguments:</p>
 <pre><code class="language-lean">def reflexive {α : Type u} (r : α → α → Prop) : Prop :=
   ∀ (a : α), r a a
 
@@ -4728,7 +4729,7 @@ This feature combined with named arguments is useful for writing patterns. Here 
 <pre><code class="language-lean">inductive Term where
   | var    (name : String)
   | num    (val : Nat)
-  | add    (fn : Term) (arg : Term)
+  | app    (fn : Term) (arg : Term)
   | lambda (name : String) (type : Term) (body : Term)
 
 def getBinderName : Term → Option String
@@ -5478,7 +5479,7 @@ theorem add_assoc (m n k : Nat) : m + n + k = m + (n + k) :=
         _ = m + (n + succ k)   := rfl)
 <span class="boring">end Hidden
 </span></code></pre>
-<p>One again, you can reduce the proof to:</p>
+<p>Once again, you can reduce the proof to:</p>
 <pre><code class="language-lean">open Nat
 theorem add_assoc (m n k : Nat) : m + n + k = m + (n + k) :=
   Nat.recOn (motive := fun k =&gt; m + n + k = m + (n + k)) k
@@ -6473,7 +6474,7 @@ are introduced in the corresponding patterns. What makes recursion and
 induction possible is that they can also involve recursive calls to
 <code>foo</code>. In this section, we will deal with <em>structural recursion</em>, in
 which the arguments to <code>foo</code> occurring on the right-hand side of the
-<code>:=</code> are subterms of the patterns on the left-hand side. The idea is
+<code>=&gt;</code> are subterms of the patterns on the left-hand side. The idea is
 that they are structurally smaller, and hence appear in the inductive
 type at an earlier stage. Here are some examples of structural
 recursion from the last chapter, now defined using the equation
@@ -6999,8 +7000,8 @@ end
 </code></pre>
 <h2><a class="header" href="#dependent-pattern-matching" id="dependent-pattern-matching">Dependent Pattern Matching</a></h2>
 <p>All the examples of pattern matching we considered in
-<a href="induction_and_recursion.html#pattern-matching">Section Pattern Matching</a> can easily be written using <code>cases_on</code>
-and <code>rec_on</code>. However, this is often not the case with indexed
+<a href="induction_and_recursion.html#pattern-matching">Section Pattern Matching</a> can easily be written using <code>casesOn</code>
+and <code>recOn</code>. However, this is often not the case with indexed
 inductive families such as <code>Vector α n</code>, since case splits impose
 constraints on the values of the indices. Without the equation
 compiler, we would need a lot of boilerplate code to define very
@@ -9288,7 +9289,7 @@ notation &quot;{ &quot; a₁ &quot;, &quot; a₂ &quot; }&quot; =&gt; mk a₁ a�
 
 end UProd
 </code></pre>
-<p>Notice that we locally define the notation <code>{a₁, a₂}</code> for ordered
+<p>Notice that we locally define the notation <code>{a₁, a₂}</code> for unordered
 pairs as <code>Quotient.mk (a₁, a₂)</code>. This is useful for illustrative
 purposes, but it is not a good idea in general, since the notation
 will shadow other uses of curly brackets, such as for records and
